@@ -1,1088 +1,476 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Rush — Aprenda o Conversor</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --dark:   #0D1B2A;
-  --dark2:  #13243A;
-  --dark3:  #1A2F48;
-  --accent: #1E90FF;
-  --green:  #00C9A7;
-  --yellow: #FFD166;
-  --red:    #FF6B6B;
-  --text:   #E8EFF8;
-  --muted:  #8899AA;
-  --border: #1E3A55;
-  --code-bg:#0A1525;
-}
-
-body {
-  font-family: 'Syne', sans-serif;
-  background: var(--dark);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* ── NAV ─────────────────────────────────────────────── */
-nav {
-  position: fixed; top: 0; left: 0; right: 0;
-  background: rgba(13,27,42,0.95);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 0;
-  z-index: 100; height: 56px;
-  padding: 0 24px;
-}
-.nav-logo {
-  font-size: 18px; font-weight: 800;
-  color: var(--accent); letter-spacing: -0.5px;
-  margin-right: 32px;
-}
-.nav-logo span { color: var(--green); }
-.nav-tabs { display: flex; gap: 0; }
-.tab-btn {
-  background: none; border: none; cursor: pointer;
-  color: var(--muted); font-family: 'Syne', sans-serif;
-  font-size: 13px; font-weight: 600; padding: 0 18px; height: 56px;
-  border-bottom: 2px solid transparent;
-  transition: all .2s; letter-spacing: 0.3px;
-}
-.tab-btn:hover { color: var(--text); }
-.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-.nav-badge {
-  margin-left: auto; font-size: 11px; color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-/* ── MAIN ────────────────────────────────────────────── */
-main {
-  margin-top: 56px;
-  max-width: 1100px; margin-inline: auto;
-  padding: 40px 24px 80px;
-}
-
-.page { display: none; }
-.page.active { display: block; }
-
-/* ── HERO ────────────────────────────────────────────── */
-.hero {
-  text-align: center; padding: 60px 0 40px;
-  position: relative;
-}
-.hero::before {
-  content: '';
-  position: absolute; inset: -40px -100px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(30,144,255,0.12) 0%, transparent 70%);
-  pointer-events: none;
-}
-.hero-tag {
-  display: inline-block; background: rgba(30,144,255,0.15);
-  border: 1px solid rgba(30,144,255,0.3); border-radius: 99px;
-  color: var(--accent); font-size: 11px; font-weight: 700;
-  letter-spacing: 1.5px; padding: 4px 14px; margin-bottom: 20px;
-}
-.hero h1 {
-  font-size: clamp(36px, 5vw, 64px); font-weight: 800;
-  line-height: 1.1; letter-spacing: -2px;
-  background: linear-gradient(135deg, #fff 30%, var(--accent));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.hero p {
-  margin-top: 16px; font-size: 16px; color: var(--muted);
-  max-width: 520px; margin-inline: auto; line-height: 1.7;
-}
-
-/* ── DEMO BOX ────────────────────────────────────────── */
-.demo-box {
-  background: var(--dark2); border: 1px solid var(--border);
-  border-radius: 16px; padding: 32px;
-  margin: 40px 0; position: relative; overflow: hidden;
-}
-.demo-box::before {
-  content: ''; position: absolute;
-  top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--green));
-}
-.demo-label {
-  font-size: 11px; color: var(--muted);
-  letter-spacing: 1.5px; font-weight: 700; margin-bottom: 16px;
-  font-family: 'JetBrains Mono', monospace;
-}
-.demo-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.demo-input {
-  flex: 1; min-width: 200px;
-  background: var(--code-bg); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px 18px;
-  color: var(--text); font-family: 'JetBrains Mono', monospace;
-  font-size: 22px; font-weight: 600; letter-spacing: 2px;
-  outline: none; transition: border-color .2s;
-}
-.demo-input:focus { border-color: var(--accent); }
-.demo-btn {
-  background: linear-gradient(135deg, var(--accent), #007BE8);
-  border: none; border-radius: 10px; padding: 14px 28px;
-  color: #fff; font-family: 'Syne', sans-serif;
-  font-size: 14px; font-weight: 700; cursor: pointer;
-  transition: transform .15s, box-shadow .15s;
-  white-space: nowrap;
-}
-.demo-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,144,255,0.35); }
-.demo-btn:active { transform: translateY(0); }
-.demo-result {
-  margin-top: 20px; padding: 16px 20px;
-  background: var(--code-bg); border-radius: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 18px; color: var(--green);
-  min-height: 52px; display: flex; align-items: center;
-  transition: all .3s;
-}
-.demo-result.error { color: var(--red); }
-.demo-result span { opacity: 0.4; color: var(--muted); }
-
-/* ── STEPS FLOW ──────────────────────────────────────── */
-.flow-section { margin: 48px 0; }
-.section-title {
-  font-size: 20px; font-weight: 800; margin-bottom: 24px;
-  display: flex; align-items: center; gap: 12px;
-}
-.section-title::after {
-  content: ''; flex: 1; height: 1px;
-  background: var(--border);
-}
-.flow-steps { display: flex; flex-direction: column; gap: 0; }
-.step-card {
-  display: flex; gap: 0; cursor: pointer;
-  transition: all .2s;
-}
-.step-card:hover .step-body { border-color: var(--accent); }
-.step-num {
-  width: 44px; display: flex; flex-direction: column;
-  align-items: center;
-}
-.step-dot {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--dark3); border: 2px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; font-weight: 700; color: var(--muted);
-  transition: all .3s; flex-shrink: 0;
-}
-.step-card.active .step-dot,
-.step-card:hover .step-dot {
-  background: var(--accent); border-color: var(--accent); color: #fff;
-}
-.step-line {
-  flex: 1; width: 2px; background: var(--border);
-  margin: 0 auto;
-}
-.step-card:last-child .step-line { display: none; }
-.step-body {
-  flex: 1; margin-left: 16px; margin-bottom: 8px;
-  background: var(--dark2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px 20px;
-  transition: all .2s;
-}
-.step-body h3 {
-  font-size: 13px; font-weight: 700; color: var(--text);
-  margin-bottom: 4px;
-}
-.step-file {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; color: var(--accent);
-  margin-bottom: 8px;
-}
-.step-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
-.step-code-preview {
-  margin-top: 10px; padding: 10px 12px;
-  background: var(--code-bg); border-radius: 8px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; color: var(--green);
-  display: none; line-height: 1.6;
-}
-.step-card.active .step-code-preview { display: block; }
-
-/* ── FILES GRID ──────────────────────────────────────── */
-.files-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px; margin: 24px 0;
-}
-.file-card {
-  background: var(--dark2); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden; cursor: pointer;
-  transition: all .2s;
-}
-.file-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.file-header {
-  padding: 14px 18px; display: flex; align-items: center; gap: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.file-icon {
-  width: 32px; height: 32px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px;
-}
-.file-name {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px; font-weight: 600; color: var(--accent);
-}
-.file-type { font-size: 10px; color: var(--muted); margin-top: 2px; }
-.file-body { padding: 14px 18px; }
-.file-desc { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
-.fn-list { display: flex; flex-direction: column; gap: 4px; }
-.fn-item {
-  font-family: 'JetBrains Mono', monospace; font-size: 11px;
-  color: var(--green); padding: 3px 8px;
-  background: rgba(0,201,167,0.08); border-radius: 4px;
-  display: inline-flex;
-}
-
-/* ── FUNCTIONS PAGE ──────────────────────────────────── */
-.fn-filter {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;
-}
-.filter-btn {
-  background: var(--dark2); border: 1px solid var(--border);
-  border-radius: 99px; padding: 6px 16px;
-  color: var(--muted); font-family: 'Syne', sans-serif;
-  font-size: 12px; font-weight: 600; cursor: pointer;
-  transition: all .2s;
-}
-.filter-btn:hover, .filter-btn.active {
-  background: rgba(30,144,255,0.15);
-  border-color: var(--accent); color: var(--accent);
-}
-.fn-cards { display: flex; flex-direction: column; gap: 12px; }
-.fn-card {
-  background: var(--dark2); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden;
-}
-.fn-card-header {
-  padding: 14px 20px; display: flex;
-  align-items: center; gap: 12px; cursor: pointer;
-  transition: background .2s;
-}
-.fn-card-header:hover { background: var(--dark3); }
-.fn-badge {
-  font-size: 10px; font-weight: 700; padding: 2px 10px;
-  border-radius: 99px; letter-spacing: 0.5px;
-}
-.badge-syscall { background: rgba(255,209,102,0.15); color: var(--yellow); border: 1px solid rgba(255,209,102,0.3); }
-.badge-parse   { background: rgba(30,144,255,0.15);  color: var(--accent); border: 1px solid rgba(30,144,255,0.3); }
-.badge-lookup  { background: rgba(0,201,167,0.15);   color: var(--green);  border: 1px solid rgba(0,201,167,0.3); }
-.badge-group   { background: rgba(255,107,107,0.15); color: var(--red);    border: 1px solid rgba(255,107,107,0.3); }
-.badge-util    { background: rgba(136,153,170,0.15); color: var(--muted);  border: 1px solid rgba(136,153,170,0.3); }
-.fn-card-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px; font-weight: 600; color: var(--text);
-}
-.fn-card-sig {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; color: var(--muted); margin-left: auto;
-}
-.fn-card-body {
-  display: none; padding: 0 20px 20px;
-  border-top: 1px solid var(--border);
-}
-.fn-card.open .fn-card-body { display: block; padding-top: 16px; }
-.fn-card.open .fn-card-header { background: var(--dark3); }
-.fn-desc { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 14px; }
-.code-block {
-  background: var(--code-bg); border-radius: 10px;
-  padding: 16px; font-family: 'JetBrains Mono', monospace;
-  font-size: 11.5px; line-height: 1.7; overflow-x: auto;
-  color: var(--text); position: relative;
-}
-.code-block .kw  { color: #82AAFF; }
-.code-block .type{ color: var(--green); }
-.code-block .fn  { color: var(--yellow); }
-.code-block .num { color: #F78C6C; }
-.code-block .cmt { color: var(--muted); font-style: italic; }
-.code-block .str { color: #C3E88D; }
-.params-table {
-  width: 100%; border-collapse: collapse; margin-top: 14px;
-  font-size: 12px;
-}
-.params-table th {
-  text-align: left; padding: 8px 12px;
-  background: var(--dark3); color: var(--muted);
-  font-weight: 600; font-size: 10px; letter-spacing: 0.8px;
-}
-.params-table td {
-  padding: 8px 12px; border-bottom: 1px solid var(--border);
-  color: var(--text);
-}
-.params-table td:first-child {
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--accent); font-size: 11px;
-}
-.ret-ok  { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-.ret-err { color: var(--red);   font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-
-/* ── DICT EXPLORER ───────────────────────────────────── */
-.dict-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 20px; margin: 24px 0;
-}
-@media (max-width: 600px) { .dict-grid { grid-template-columns: 1fr; } }
-.dict-panel {
-  background: var(--dark2); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden;
-}
-.dict-panel-header {
-  padding: 14px 18px; border-bottom: 1px solid var(--border);
-  font-size: 12px; font-weight: 700; color: var(--muted);
-  letter-spacing: 1px;
-}
-.dict-entries { max-height: 400px; overflow-y: auto; }
-.dict-entry {
-  display: flex; align-items: center; gap: 0;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer; transition: background .15s;
-}
-.dict-entry:hover, .dict-entry.highlight { background: rgba(30,144,255,0.08); }
-.dict-entry.highlight { border-left: 3px solid var(--accent); }
-.dict-key {
-  padding: 10px 14px; font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; color: var(--accent); font-weight: 600;
-  min-width: 120px; border-right: 1px solid var(--border);
-}
-.dict-sep { padding: 10px 8px; color: var(--muted); font-size: 12px; }
-.dict-val { padding: 10px 8px; font-size: 13px; color: var(--green); }
-.dict-trace {
-  font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
-  line-height: 1.8; padding: 16px;
-}
-.trace-line { padding: 3px 0; }
-.trace-line.hit { color: var(--green); }
-.trace-line.arrow { color: var(--accent); padding-left: 10px; }
-
-/* ── QUIZ ────────────────────────────────────────────── */
-.quiz-box {
-  background: var(--dark2); border: 1px solid var(--border);
-  border-radius: 16px; padding: 32px; margin: 24px 0;
-}
-.quiz-question {
-  font-size: 16px; font-weight: 700; margin-bottom: 24px;
-  line-height: 1.5;
-}
-.quiz-question code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px; color: var(--accent);
-  background: var(--code-bg); padding: 2px 8px;
-  border-radius: 4px;
-}
-.quiz-options { display: flex; flex-direction: column; gap: 10px; }
-.quiz-opt {
-  background: var(--dark3); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px 18px; cursor: pointer;
-  font-size: 13px; transition: all .2s; display: flex;
-  align-items: center; gap: 12px;
-}
-.quiz-opt:hover:not(.disabled) { border-color: var(--accent); background: rgba(30,144,255,0.1); }
-.quiz-opt.correct { border-color: var(--green); background: rgba(0,201,167,0.1); color: var(--green); }
-.quiz-opt.wrong   { border-color: var(--red);   background: rgba(255,107,107,0.1); color: var(--red); }
-.quiz-opt.disabled { cursor: not-allowed; }
-.opt-letter {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: var(--dark); display: flex; align-items: center;
-  justify-content: center; font-size: 11px; font-weight: 700;
-  flex-shrink: 0; font-family: 'JetBrains Mono', monospace;
-}
-.quiz-feedback {
-  margin-top: 20px; padding: 14px 18px;
-  border-radius: 10px; font-size: 13px; line-height: 1.6;
-  display: none;
-}
-.quiz-feedback.show { display: block; }
-.quiz-feedback.ok { background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.3); color: var(--green); }
-.quiz-feedback.no { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: var(--red); }
-.quiz-nav {
-  display: flex; gap: 12px; margin-top: 24px;
-  align-items: center;
-}
-.quiz-progress {
-  flex: 1; text-align: center;
-  font-size: 12px; color: var(--muted);
-}
-.btn-sm {
-  background: var(--dark3); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 20px; cursor: pointer;
-  color: var(--text); font-family: 'Syne', sans-serif;
-  font-size: 13px; font-weight: 600; transition: all .2s;
-}
-.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
-.score-display {
-  text-align: center; padding: 40px;
-}
-.score-num {
-  font-size: 72px; font-weight: 800;
-  background: linear-gradient(135deg, var(--green), var(--accent));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.score-msg { font-size: 16px; color: var(--muted); margin-top: 12px; }
-
-/* ── MISC ────────────────────────────────────────────── */
-.info-tag {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; padding: 3px 10px; border-radius: 99px;
-  font-weight: 600; letter-spacing: 0.3px;
-}
-.tag-mem { background: rgba(255,209,102,0.12); color: var(--yellow); border: 1px solid rgba(255,209,102,0.25); }
-.tag-io  { background: rgba(30,144,255,0.12);  color: var(--accent); border: 1px solid rgba(30,144,255,0.25); }
-.tag-ret { background: rgba(0,201,167,0.12);   color: var(--green);  border: 1px solid rgba(0,201,167,0.25); }
-.tag-warn{ background: rgba(255,107,107,0.12); color: var(--red);    border: 1px solid rgba(255,107,107,0.25); }
-
-.blink { animation: blink 1s steps(1) infinite; }
-@keyframes blink { 50% { opacity: 0; } }
-
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--dark); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Documentação interativa do projeto Rush — conversor de números em palavras em C. Escola 42."/>
+  <title>Rush — Documentação Interativa · Escola 42</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-<nav>
-  <div class="nav-logo">Rush<span>.c</span></div>
+<!-- ══════════════════════════════════════════════════
+     NAVEGAÇÃO PRINCIPAL
+══════════════════════════════════════════════════ -->
+<nav id="navbar">
+  <div class="nav-brand">Rush<em>.c</em></div>
   <div class="nav-tabs">
-    <button class="tab-btn active" onclick="showPage('home',this)">🏠 Início</button>
-    <button class="tab-btn" onclick="showPage('flow',this)">⚙️ Fluxo</button>
-    <button class="tab-btn" onclick="showPage('files',this)">📁 Arquivos</button>
-    <button class="tab-btn" onclick="showPage('functions',this)">🔧 Funções</button>
-    <button class="tab-btn" onclick="showPage('dict',this)">📖 Dicionário</button>
-    <button class="tab-btn" onclick="showPage('quiz',this)">🧠 Quiz</button>
+    <button class="nav-tab active"  onclick="showPage('home',this)">🏠 Início</button>
+    <button class="nav-tab"        onclick="showPage('flow',this)">⚙️ Fluxo</button>
+    <button class="nav-tab"        onclick="showPage('arch',this)">🏛️ Arquitetura</button>
+    <button class="nav-tab"        onclick="showPage('files',this)">📁 Arquivos</button>
+    <button class="nav-tab"        onclick="showPage('make',this)">🔨 Makefile</button>
+    <button class="nav-tab"        onclick="showPage('functions',this)">🔧 Funções</button>
+    <button class="nav-tab"        onclick="showPage('dict',this)">📖 Dicionário</button>
+    <button class="nav-tab"        onclick="showPage('quiz',this)">🧠 Quiz</button>
   </div>
-  <div class="nav-badge">Escola 42 · 2026</div>
 </nav>
 
-<main>
+<main id="main">
 
-<!-- ═══════ HOME ═══════ -->
-<div id="page-home" class="page active">
-  <div class="hero">
-    <div class="hero-tag">PROJETO RUSH · LINGUAGEM C</div>
-    <h1>Conversor de<br/>Números em Palavras</h1>
-    <p>Aprenda de forma interativa como um programa em C puro converte números em palavras usando apenas syscalls do sistema.</p>
-  </div>
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: INÍCIO
+  ══════════════════════════════════════════════ -->
+  <section id="pg-home" class="page active">
 
-  <div class="demo-box">
-    <div class="demo-label">// EXPERIMENTE — SIMULE O PROGRAMA</div>
-    <div class="demo-row">
-      <input class="demo-input" id="demo-input" type="text" placeholder="Digite um número..."
-             maxlength="30" oninput="runDemo()" onkeydown="if(event.key==='Enter')runDemo()"/>
-      <button class="demo-btn" onclick="runDemo()">▶ Converter</button>
+    <div id="hero">
+      <div class="hero-glow"></div>
+      <div class="hero-tag">PROJETO RUSH · ESCOLA 42 · 2026</div>
+      <h1>
+        <span class="line1">Conversor de Números</span><br/>
+        <span class="line2">em Palavras</span>
+      </h1>
+      <p class="hero-sub">
+        Aprenda de forma interativa como um programa em C puro converte
+        números em palavras usando apenas syscalls POSIX — sem printf, sem
+        fopen, sem strtol.
+      </p>
     </div>
-    <div class="demo-result" id="demo-result">
-      <span>→ resultado aparece aqui</span>
-    </div>
-  </div>
 
-  <div class="flow-section">
-    <div class="section-title">Como funciona em 4 passos</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
-      <div style="background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="font-size:28px;margin-bottom:12px;">📂</div>
-        <div style="font-weight:700;margin-bottom:6px;">1. Carregar Dicionário</div>
-        <div style="font-size:12px;color:var(--muted);">open() + read() + close() lêem o arquivo numbers.dict para a memória heap via malloc()</div>
+    <!-- Demo interativo -->
+    <div class="demo-wrap">
+      <div class="demo-label">// EXPERIMENTE — SIMULE O PROGRAMA ./rush-02</div>
+      <div class="demo-row">
+        <input
+          class="demo-input"
+          id="demo-inp"
+          type="text"
+          placeholder="Digite um número..."
+          maxlength="15"
+          autocomplete="off"
+        />
+        <button class="demo-btn" onclick="runDemo()">▶ Converter</button>
       </div>
-      <div style="background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="font-size:28px;margin-bottom:12px;">✅</div>
-        <div style="font-weight:700;margin-bottom:6px;">2. Validar Dicionário</div>
-        <div style="font-size:12px;color:var(--muted);">dict_is_valid() verifica linha por linha o formato "número: palavra" com parse_line()</div>
-      </div>
-      <div style="background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="font-size:28px;margin-bottom:12px;">🔢</div>
-        <div style="font-weight:700;margin-bottom:6px;">3. Agrupar Dígitos</div>
-        <div style="font-size:12px;color:var(--muted);">write_group() divide o número em grupos de 3 dígitos da esquerda para a direita</div>
-      </div>
-      <div style="background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="font-size:28px;margin-bottom:12px;">📢</div>
-        <div style="font-weight:700;margin-bottom:6px;">4. Imprimir Palavras</div>
-        <div style="font-size:12px;color:var(--muted);">write(1, ...) imprime cada palavra com seus separadores diretamente no stdout</div>
+      <div class="demo-result" id="demo-res">
+        <span class="ph">→ resultado aparece aqui</span>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- ═══════ FLOW ═══════ -->
-<div id="page-flow" class="page">
-  <h2 class="section-title" style="margin-top:20px;">Fluxo de Execução — Passo a Passo</h2>
-  <p style="color:var(--muted);font-size:13px;margin-bottom:24px;">Clique em cada passo para ver os detalhes do código.</p>
-
-  <div class="demo-box">
-    <div class="demo-label">// TRACE — ACOMPANHE O FLUXO PARA UM NÚMERO</div>
-    <div class="demo-row">
-      <input class="demo-input" id="flow-input" type="text" placeholder="Ex: 1042"
-             maxlength="20" style="font-size:18px;" oninput="updateFlowTrace()"/>
-    </div>
-    <div id="flow-trace" class="dict-trace" style="margin-top:12px;"></div>
-  </div>
-
-  <div class="flow-steps" id="flow-steps">
-    <!-- steps inserted by JS -->
-  </div>
-</div>
-
-<!-- ═══════ FILES ═══════ -->
-<div id="page-files" class="page">
-  <h2 class="section-title" style="margin-top:20px;">Estrutura de Arquivos</h2>
-  <div class="files-grid" id="files-grid"></div>
-</div>
-
-<!-- ═══════ FUNCTIONS ═══════ -->
-<div id="page-functions" class="page">
-  <h2 class="section-title" style="margin-top:20px;">Funções do Projeto</h2>
-  <div class="fn-filter">
-    <button class="filter-btn active" onclick="filterFns('all',this)">Todas</button>
-    <button class="filter-btn" onclick="filterFns('syscall',this)">🖥️ Syscalls</button>
-    <button class="filter-btn" onclick="filterFns('parse',this)">📝 Parsing</button>
-    <button class="filter-btn" onclick="filterFns('lookup',this)">🔍 Lookup</button>
-    <button class="filter-btn" onclick="filterFns('group',this)">🔢 Grupo</button>
-    <button class="filter-btn" onclick="filterFns('util',this)">🔧 Util</button>
-  </div>
-  <div class="fn-cards" id="fn-cards"></div>
-</div>
-
-<!-- ═══════ DICT ═══════ -->
-<div id="page-dict" class="page">
-  <h2 class="section-title" style="margin-top:20px;">Explorador do Dicionário</h2>
-  <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">
-    Clique em uma entrada para ver como ela é encontrada no código. Digite um número para simular a busca.
-  </p>
-  <div class="demo-row" style="margin-bottom:24px;">
-    <input class="demo-input" id="dict-search" type="text" placeholder="Digite um número para buscar..."
-           maxlength="25" style="font-size:16px;" oninput="dictSearch()"/>
-  </div>
-  <div class="dict-grid">
-    <div class="dict-panel">
-      <div class="dict-panel-header">numbers.dict</div>
-      <div class="dict-entries" id="dict-entries"></div>
-    </div>
-    <div class="dict-panel">
-      <div class="dict-panel-header">Trace da busca</div>
-      <div class="dict-trace" id="dict-trace-panel">
-        <div style="color:var(--muted);">← Clique em uma entrada ou busque um número</div>
+    <!-- 4 pilares -->
+    <span class="sec-label">COMO FUNCIONA</span>
+    <div class="overview-grid">
+      <div class="ov-card" data-num="1">
+        <div class="ico">📂</div>
+        <h3>Carregar Dicionário</h3>
+        <p><code>open()</code> + <code>read()</code> + <code>close()</code> lêem o numbers.dict para memória heap via <code>malloc()</code></p>
+      </div>
+      <div class="ov-card" data-num="2">
+        <div class="ico">✅</div>
+        <h3>Validar Formato</h3>
+        <p><code>dict_is_valid()</code> verifica cada linha com <code>parse_line()</code> — formato "número: palavra"</p>
+      </div>
+      <div class="ov-card" data-num="3">
+        <div class="ico">🔢</div>
+        <h3>Agrupar Dígitos</h3>
+        <p><code>advance_gs()</code> divide o número em grupos de 3 dígitos usando o operador módulo</p>
+      </div>
+      <div class="ov-card" data-num="4">
+        <div class="ico">📢</div>
+        <h3>Imprimir Palavras</h3>
+        <p><code>write(1,...)</code> imprime cada palavra diretamente no stdout — sem printf()</p>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- ═══════ QUIZ ═══════ -->
-<div id="page-quiz" class="page">
-  <h2 class="section-title" style="margin-top:20px;">Quiz — Teste seu Conhecimento</h2>
-  <div class="quiz-box" id="quiz-box"></div>
-</div>
+    <!-- Exemplos rápidos -->
+    <div class="hr"></div>
+    <span class="sec-label">EXEMPLOS DE SAÍDA</span>
+    <div class="code-art mt16">
+      <div class="code-art-bar">
+        <div class="code-art-dots"><span></span><span></span><span></span></div>
+        <div class="code-art-title">terminal — exemplos de uso</div>
+      </div>
+      <div class="code-art-body">$ ./rush-02 0
+zero
+
+$ ./rush-02 42
+forty two
+
+$ ./rush-02 999
+nine hundred ninety nine
+
+$ ./rush-02 1042
+one thousand forty two
+
+$ ./rush-02 1000000
+one million
+
+$ ./rush-02 123456789
+one hundred twenty three million four hundred fifty six thousand seven hundred eighty nine
+
+$ ./rush-02 pt.dict 42
+quarenta e dois   <span style="color:var(--text3)">← com dicionário personalizado</span></div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: FLUXO DE EXECUÇÃO
+  ══════════════════════════════════════════════ -->
+  <section id="pg-flow" class="page">
+
+    <div class="sec-head">
+      <span class="sec-label">PASSO A PASSO</span>
+      <h2>Fluxo de <span>Execução</span></h2>
+      <p>Clique em cada passo para ver o código real. Digite um número no trace interativo para acompanhar o fluxo.</p>
+    </div>
+
+    <!-- Trace interativo -->
+    <div class="demo-wrap">
+      <div class="demo-label">// TRACE INTERATIVO — acompanhe cada chamada de função</div>
+      <div class="demo-row">
+        <input
+          class="demo-input"
+          id="trace-inp"
+          type="text"
+          placeholder="Ex: 1042"
+          maxlength="12"
+          style="font-size:18px;letter-spacing:2px"
+          autocomplete="off"
+        />
+      </div>
+      <div class="trace-wrap" id="trace-out">
+        <div class="trace-line" style="color:var(--text3)">Digite um número acima para ver o trace...</div>
+      </div>
+    </div>
+
+    <!-- Flow steps -->
+    <div class="flow-container" id="flow-container"></div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: ARQUITETURA
+  ══════════════════════════════════════════════ -->
+  <section id="pg-arch" class="page">
+
+    <div class="sec-head">
+      <span class="sec-label">VISÃO GERAL</span>
+      <h2>Arquitetura do <span>Sistema</span></h2>
+      <p>Diagrama interativo mostrando como os arquivos e funções se relacionam, e como a memória é gerenciada.</p>
+    </div>
+
+    <!-- Diagrama de arquitetura -->
+    <div class="diagram-wrap">
+      <div class="diagram-title">// DIAGRAMA DE MÓDULOS — relação entre arquivos e chamadas</div>
+      <div id="arch-diagram"></div>
+    </div>
+
+    <!-- Diagrama de memória -->
+    <div class="sec-head mt24">
+      <span class="sec-label">GESTÃO DE MEMÓRIA</span>
+      <h2>Stack <span>vs</span> Heap</h2>
+      <p>Visualização de onde cada variável vive e quando é liberada.</p>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">// MAPA DE MEMÓRIA — stack (local) vs heap (malloc)</div>
+      <div id="mem-diagram"></div>
+    </div>
+
+    <!-- Explicação textual da memória -->
+    <div class="code-art mt24">
+      <div class="code-art-bar">
+        <div class="code-art-dots"><span></span><span></span><span></span></div>
+        <div class="code-art-title">regra de ouro da memória neste projeto</div>
+      </div>
+      <div class="code-art-body">/*
+ * STACK: variáveis locais — vida limitada à função
+ *   char buf[4096];     -> morre quando read_dict_file() retorna
+ *   char line[512];     -> morre quando parse_line() retorna
+ *   char val[256];      -> morre quando dict_lookup() retorna
+ *
+ * HEAP: malloc() — vida controlada pelo programador
+ *   char *filename;     -> malloc(100)     em get_dict_path()
+ *   char *dict;         -> malloc(len+1)   em read_dict_file()
+ *   char *nbr;          -> malloc(40)      em get_number()
+ *
+ * REGRA: todo malloc() tem um free() correspondente em run()
+ *   free(filename);  free(dict);  free(nbr);
+ *
+ * CONSEQUÊNCIA: usar char filename[100] em get_dict_path()
+ * e retornar filename* causaria USE AFTER STACK — bug clássico C.
+ */</div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: ARQUIVOS
+  ══════════════════════════════════════════════ -->
+  <section id="pg-files" class="page">
+
+    <div class="sec-head">
+      <span class="sec-label">ESTRUTURA DO PROJETO</span>
+      <h2>Arquivos e <span>Responsabilidades</span></h2>
+      <p>Cada arquivo tem uma responsabilidade única — modularidade que facilita manutenção e compreensão.</p>
+    </div>
+
+    <div class="files-grid" id="files-grid"></div>
+
+    <!-- Bibliotecas do sistema -->
+    <div class="hr"></div>
+    <span class="sec-label">BIBLIOTECAS INCLUÍDAS EM header.h</span>
+
+    <div class="code-art mt16">
+      <div class="code-art-bar">
+        <div class="code-art-dots"><span></span><span></span><span></span></div>
+        <div class="code-art-title">header.h — include guard + bibliotecas do sistema</div>
+      </div>
+      <div class="code-art-body">/*
+ * header.h — o "cérebro central" do projeto
+ *
+ * Include guard: evita inclusão dupla durante a compilação.
+ * Se header.h for incluído em dois arquivos diferentes,
+ * o pré-processador só processa o conteúdo uma vez.
+ */
+#ifndef HEADER_H          /* se HEADER_H não foi definido... */
+# define HEADER_H         /* define agora para não repetir  */
+
+# include &lt;unistd.h&gt;   /* write(), read(), close() — syscalls POSIX */
+# include &lt;stdlib.h&gt;   /* malloc(), free()          — memória dinâmica */
+# include &lt;fcntl.h&gt;    /* open(), O_RDONLY          — flags de arquivo */
+
+/* Utilitários de string (sem strlen, sem strcpy) */
+void   print_str(char *str);
+int    str_len(char *str);
+
+/* Validação e entrada */
+int    is_valid_arg(char *argv, int mode);
+void   get_number(int argc, char **argv, char **nbr);
+
+/* Dicionário — arquivo */
+char  *get_dict_path(int argc, char **argv);
+char  *read_dict_file(char *filename);
+
+/* Dicionário — parsing */
+int    parse_line(char *line, long *key, char *val, int valsz);
+int    trim_value(char *val, char *out, int outsz);
+int    next_line(char *dict, int i, char *line);
+int    dict_is_valid(char *dict);
+
+/* Dicionário — busca */
+int    dict_lookup(char *dict, long key, char *out, int outsz);
+int    dict_lookup_zeros(char *dict, int nzeros, char *out, int outsz);
+int    write_scale_word(long key, char *dict);
+int    write_digit(char dig, int type, char *dict);
+
+/* Conversão — grupo */
+int    write_two_digits(char *nbr, int start, char *dict);
+int    write_group_of_three(char *nbr, int start, int size, char *dict);
+int    write_group(char *nbr, int pos, int len, char *dict);
+int    advance_gs(int len, int pos);
+int    has_nonzero(char *nbr, int pos, int gs);
+int    write_number(char *nbr, char *dict);
+
+#endif /* HEADER_H */</div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: MAKEFILE
+  ══════════════════════════════════════════════ -->
+  <section id="pg-make" class="page">
+
+    <div class="sec-head">
+      <span class="sec-label">AUTOMAÇÃO DE BUILD</span>
+      <h2>Makefile <span>Explicado</span></h2>
+      <p>O Makefile automatiza a compilação. Clique em cada regra para ver a explicação detalhada.</p>
+    </div>
+
+    <!-- Makefile completo -->
+    <div class="code-art">
+      <div class="code-art-bar">
+        <div class="code-art-dots"><span></span><span></span><span></span></div>
+        <div class="code-art-title">Makefile — arquivo completo anotado</div>
+        <button class="code-art-copy" onclick="copyCode(this)">copiar</button>
+      </div>
+      <div class="code-art-body">
+<span style="color:var(--text3)"># ── Variáveis ───────────────────────────────────────</span>
+NAME  = rush-02                    <span style="color:var(--text3)"># nome do executável gerado</span>
+SRC   = main.c group.c lookup.c parse.c \
+        utils.c rush_number.c rushfile.c rush_ini.c
+FLAGS = -Wall -Wextra -Werror      <span style="color:var(--text3)"># compilação estrita</span>
+RM    = /bin/rm -f                 <span style="color:var(--text3)"># rm sem erro se não existir</span>
+
+<span style="color:var(--text3)"># ── Regras ──────────────────────────────────────────</span>
+all: $(NAME)                       <span style="color:var(--text3)"># regra padrão</span>
+
+$(NAME):
+	gcc $(FLAGS) -o $(NAME) $(SRC) <span style="color:var(--text3)"># compila tudo direto</span>
+
+clean:
+	$(RM) *.o                      <span style="color:var(--text3)"># remove objetos intermediários</span>
+
+fclean: clean
+	$(RM) $(NAME)                  <span style="color:var(--text3)"># remove o executável também</span>
+
+re: fclean all                     <span style="color:var(--text3)"># recompila do zero</span></div>
+    </div>
+
+    <!-- Flags -->
+    <div class="hr"></div>
+    <span class="sec-label">FLAGS DO COMPILADOR GCC</span>
+    <div class="overview-grid mt16" style="margin-top:16px">
+      <div class="ov-card" style="border-color:rgba(255,184,48,.2)">
+        <div class="ico">⚠️</div>
+        <h3 style="color:var(--amber)">-Wall</h3>
+        <p>Ativa todos os avisos comuns: variáveis não usadas, comparações suspeitas, funções sem retorno, etc.</p>
+      </div>
+      <div class="ov-card" style="border-color:rgba(255,184,48,.2)">
+        <div class="ico">🔍</div>
+        <h3 style="color:var(--amber)">-Wextra</h3>
+        <p>Avisos extras além do -Wall: parâmetros não usados, comparações entre tipos com/sem sinal, inicializações parciais.</p>
+      </div>
+      <div class="ov-card" style="border-color:rgba(255,91,91,.2)">
+        <div class="ico">🚫</div>
+        <h3 style="color:var(--red)">-Werror</h3>
+        <p>Converte TODOS os avisos em erros. O código não compila enquanto houver qualquer aviso. Padrão Escola 42.</p>
+      </div>
+    </div>
+
+    <!-- Regras expandíveis -->
+    <div class="hr"></div>
+    <span class="sec-label">REGRAS DETALHADAS</span>
+    <div id="make-rules" class="mt16"></div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: FUNÇÕES
+  ══════════════════════════════════════════════ -->
+  <section id="pg-functions" class="page">
+
+    <div class="sec-head">
+      <span class="sec-label">REFERÊNCIA COMPLETA</span>
+      <h2>Funções do <span>Projeto</span></h2>
+      <p>Cada função com analogia visual, passo a passo, código anotado e parâmetros detalhados.</p>
+    </div>
+
+    <div class="fn-filter-bar">
+      <button class="fn-filter-btn active" onclick="filterFns('all',this)">Todas</button>
+      <button class="fn-filter-btn" onclick="filterFns('syscall',this)">🖥️ Syscalls</button>
+      <button class="fn-filter-btn" onclick="filterFns('parse',this)">📝 Parsing</button>
+      <button class="fn-filter-btn" onclick="filterFns('lookup',this)">🔍 Lookup</button>
+      <button class="fn-filter-btn" onclick="filterFns('group',this)">🔢 Agrupamento</button>
+    </div>
+
+    <div id="fn-list"></div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: DICIONÁRIO
+  ══════════════════════════════════════════════ -->
+  <section id="pg-dict" class="page">
+
+    <div class="sec-head">
+      <span class="sec-label">EXPLORADOR INTERATIVO</span>
+      <h2>O <span>Dicionário</span> numbers.dict</h2>
+      <p>Clique numa entrada ou busque uma chave para ver o trace exato da busca linha por linha.</p>
+    </div>
+
+    <div class="demo-wrap">
+      <div class="demo-label">// BUSCAR CHAVE — simula dict_lookup(dict, key, out, 256)</div>
+      <div class="demo-row">
+        <input
+          class="demo-input"
+          id="dict-search"
+          type="text"
+          placeholder="Ex: 1000"
+          maxlength="15"
+          style="font-size:16px;letter-spacing:1px"
+          oninput="dictSearch()"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+
+    <!-- Como o formato funciona -->
+    <div class="code-art mb16">
+      <div class="code-art-bar">
+        <div class="code-art-dots"><span></span><span></span><span></span></div>
+        <div class="code-art-title">numbers.dict — formato e estrutura</div>
+      </div>
+      <div class="code-art-body">
+<span style="color:var(--text3)"># Formato: [número][espaços ou tab]:[valor]</span>
+<span style="color:var(--text3)"># parse_line() extrai a chave (long) e o valor (string)</span>
+<span style="color:var(--text3)"># trim_value() normaliza espaços no valor</span>
+
+0: zero          <span style="color:var(--text3)"># chave=0, val="zero"</span>
+1: one
+...
+19: nineteen     <span style="color:var(--text3)"># teens (10-19) têm nomes únicos</span>
+20: twenty
+30: thirty       <span style="color:var(--text3)"># dezenas (20-90) — base para dezena+unidade</span>
+...
+100: hundred     <span style="color:var(--text3)"># dict_lookup_zeros(dict, 2) -> "hundred"</span>
+1000: thousand   <span style="color:var(--text3)"># dict_lookup_zeros(dict, 3) -> "thousand"</span>
+1000000: million <span style="color:var(--text3)"># dict_lookup_zeros(dict, 6) -> "million"</span>
+...</div>
+    </div>
+
+    <div class="dict-layout">
+      <div class="dict-panel">
+        <div class="dict-panel-head">
+          <span>numbers.dict — 40 entradas</span>
+          <span style="color:var(--cyan)">clique para buscar</span>
+        </div>
+        <div class="dict-entries" id="dict-entries"></div>
+      </div>
+      <div class="dict-panel">
+        <div class="dict-panel-head">Trace da busca — dict_lookup()</div>
+        <div class="trace-wrap" id="dict-trace" style="margin:0;border:none;border-radius:0;max-height:440px">
+          <div class="trace-line" style="color:var(--text3)">← Clique numa entrada ou busque...</div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: QUIZ
+  ══════════════════════════════════════════════ -->
+  <section id="pg-quiz" class="page">
+
+    <div class="sec-head">
+      <span class="sec-label">TESTE SEU CONHECIMENTO</span>
+      <h2>Quiz — <span>28 Questões</span></h2>
+      <p>Syscalls, parsing, agrupamento, memória e Makefile. Acertos em sequência dão bônus 🔥</p>
+    </div>
+
+    <div class="quiz-wrap" id="quiz-box">
+      <!-- gerado por JS -->
+    </div>
+
+  </section>
 
 </main>
 
-<script>
-// ══════ DATA ══════════════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════
+     SCRIPT
+══════════════════════════════════════════════ -->
+<script src="main.js"></script>
 
-const DICT = {
-  0:'zero',1:'one',2:'two',3:'three',4:'four',5:'five',
-  6:'six',7:'seven',8:'eight',9:'nine',10:'ten',11:'eleven',
-  12:'twelve',13:'thirteen',14:'fourteen',15:'fifteen',16:'sixteen',
-  17:'seventeen',18:'eighteen',19:'nineteen',20:'twenty',30:'thirty',
-  40:'forty',50:'fifty',60:'sixty',70:'seventy',80:'eighty',90:'ninety',
-  100:'hundred',1000:'thousand',1000000:'million',1000000000:'billion',
-  1000000000000:'trillion'
-};
-
-const DICT_ENTRIES = Object.entries(DICT).map(([k,v])=>({key:+k,val:v}));
-
-function numToWords(n) {
-  if (n === '' || n === null) return null;
-  const num = BigInt(n);
-  if (num === 0n) return 'zero';
-  const scales = [
-    [1000000000000n,'trillion'],[1000000000n,'billion'],
-    [1000000n,'million'],[1000n,'thousand'],[100n,'hundred']
-  ];
-  function group(n) {
-    if (n === 0n) return '';
-    let r = '';
-    for (const [s,w] of scales) {
-      if (n >= s) {
-        if (s === 100n) {
-          r += (r ? ' ' : '') + group(n/100n) + ' hundred';
-          n = n % 100n;
-          if (n > 0n) r += ' ';
-        } else {
-          r += (r ? ' ' : '') + group(n/s) + ' ' + w;
-          n = n % s;
-          if (n > 0n) r += ' ';
-        }
-      }
-    }
-    if (n > 0n) {
-      if (n < 20n) {
-        const teens = ['ten','eleven','twelve','thirteen','fourteen','fifteen',
-                       'sixteen','seventeen','eighteen','nineteen'];
-        if (n >= 10n) r += teens[Number(n)-10];
-        else r += ['zero','one','two','three','four','five','six','seven','eight','nine'][Number(n)];
-      } else {
-        const tens = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
-        r += tens[Number(n/10n)];
-        if (n % 10n !== 0n) r += ' ' + ['','one','two','three','four','five','six','seven','eight','nine'][Number(n%10n)];
-      }
-    }
-    return r;
-  }
-  return group(num);
-}
-
-// ══════ DEMO ══════════════════════════════════════════════════════════════
-
-function runDemo() {
-  const inp = document.getElementById('demo-input').value.trim();
-  const el  = document.getElementById('demo-result');
-  if (!inp) { el.innerHTML = '<span>→ resultado aparece aqui</span>'; el.className='demo-result'; return; }
-  if (!/^\d+$/.test(inp)) { el.textContent = 'Erro: apenas dígitos são permitidos'; el.className='demo-result error'; return; }
-  try {
-    const w = numToWords(inp);
-    el.textContent = '→ ' + w;
-    el.className = 'demo-result';
-  } catch(e) { el.textContent = 'Número muito grande'; el.className='demo-result error'; }
-}
-
-// ══════ NAV ═══════════════════════════════════════════════════════════════
-
-function showPage(id, btn) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  btn.classList.add('active');
-}
-
-// ══════ FLOW ══════════════════════════════════════════════════════════════
-
-const FLOW_STEPS = [
-  {
-    num:'01', title:'main() — Validar Argumentos', file:'main.c',
-    desc:'args_valid() verifica se há 1 ou 2 argumentos válidos (dígitos / caminho). Retorna 0 se inválido.',
-    code:'if (args_valid(argc, argv) >= 1)\n    run(argc, argv);\nelse\n    print_str("Error\\n");'
-  },
-  {
-    num:'02', title:'get_dict_path() — Localizar Dicionário', file:'rushfile.c',
-    desc:'Se argc==2, usa "numbers.dict". Caso contrário usa argv[1] como caminho.',
-    code:'src = (argc == 2) ? "numbers.dict" : argv[1];\nfilename = malloc(100);\n// copia src para filename'
-  },
-  {
-    num:'03', title:'read_dict_file() — Carregar Arquivo', file:'rushfile.c',
-    desc:'open() abre o arquivo. read() lê até 4095 bytes. close() fecha imediatamente. malloc() copia para heap.',
-    code:'fd = open(filename, O_RDONLY);\nlen = read(fd, buf, 4095);\nclose(fd);\ndict = malloc(len + 1);'
-  },
-  {
-    num:'04', title:'dict_is_valid() — Validar Formato', file:'parse.c',
-    desc:'Percorre cada linha com next_line() e verifica o formato "número: valor" com parse_line().',
-    code:'while (dict[i] != \'\\0\') {\n    i = next_line(dict, i, line);\n    if (parse_line(line, &key, val, 256) == -1)\n        return (0);\n}'
-  },
-  {
-    num:'05', title:'get_number() — Extrair Número', file:'rush_ini.c',
-    desc:'malloc(40) copia o argumento número da argv para a heap.',
-    code:'i = (argc == 2) ? 1 : 2;\n*nbr = malloc(40);\nwhile (argv[i][j]) (*nbr)[j] = argv[i][j++];'
-  },
-  {
-    num:'06', title:'write_number() — Iniciar Conversão', file:'group.c',
-    desc:'Chama has_nonzero() e write_group() iterativamente para cada grupo de dígitos.',
-    code:'while (pos < len) {\n    if (has_nonzero(nbr, pos, gs))\n        write_group(nbr, pos, len, dict);\n    pos += gs;\n}'
-  },
-  {
-    num:'07', title:'write_group() — Grupo com Escala', file:'group.c',
-    desc:'advance_gs() calcula o tamanho do grupo. write_group_of_three() imprime os dígitos. dict_lookup_zeros() encontra a escala.',
-    code:'gs = advance_gs(len, pos);\nwrite_group_of_three(nbr, pos, gs, dict);\nrem = len - pos - gs;\nif (rem > 0) dict_lookup_zeros(dict, rem, word, 256);'
-  },
-  {
-    num:'08', title:'write_digit() → write_scale_word()', file:'lookup.c',
-    desc:'Converte o caractere dígito para chave numérica, busca no dicionário e imprime com write().',
-    code:'key = (long)(dig - \'0\'); // type=0\ndict_lookup(dict, key, word, 256);\nwrite(1, word, str_len(word));'
-  },
-  {
-    num:'09', title:'free() — Liberar Memória', file:'main.c',
-    desc:'Após a conversão, todos os buffers alocados com malloc() são liberados.',
-    code:'free(filename);\nfree(dict);\nfree(nbr);'
-  },
-  {
-    num:'10', title:'write(1, "\\n", 1) — Nova Linha', file:'main.c',
-    desc:'Uma nova linha é impressa no stdout após o resultado.',
-    code:'if (*ret >= 0)\n    write(1, "\\n", 1);\nelse\n    print_str("Dict Error\\n");'
-  },
-];
-
-function buildFlowSteps() {
-  const c = document.getElementById('flow-steps');
-  c.innerHTML = FLOW_STEPS.map((s,i)=>`
-    <div class="step-card" id="fstep-${i}" onclick="toggleStep(${i})">
-      <div class="step-num">
-        <div class="step-dot">${s.num}</div>
-        <div class="step-line"></div>
-      </div>
-      <div class="step-body">
-        <h3>${s.title}</h3>
-        <div class="step-file">${s.file}</div>
-        <div class="step-desc">${s.desc}</div>
-        <pre class="step-code-preview">${s.code}</pre>
-      </div>
-    </div>`).join('');
-}
-
-function toggleStep(i) {
-  const el = document.getElementById('fstep-'+i);
-  el.classList.toggle('active');
-}
-
-function updateFlowTrace() {
-  const inp = document.getElementById('flow-input').value.trim();
-  const el  = document.getElementById('flow-trace');
-  if (!inp || !/^\d+$/.test(inp)) { el.innerHTML = ''; return; }
-  const len = inp.length;
-  let lines = [];
-  lines.push(`<div class="trace-line">main("${inp}") → args_valid() ✓</div>`);
-  lines.push(`<div class="trace-line">get_dict_path() → "numbers.dict"</div>`);
-  lines.push(`<div class="trace-line">read_dict_file() → open()+read(${Math.min(4095,len+100)}B)+close()+malloc()</div>`);
-  lines.push(`<div class="trace-line">dict_is_valid() → OK (40 entradas)</div>`);
-  lines.push(`<div class="trace-line">get_number() → malloc(40) → "${inp}"</div>`);
-  let pos = 0;
-  while (pos < len) {
-    let gs = (len-pos)%3; if(!gs) gs=3;
-    const rem = len-pos-gs;
-    const grp = inp.slice(pos,pos+gs);
-    const scale = rem===3?'thousand':rem===6?'million':rem===9?'billion':rem===12?'trillion':'';
-    lines.push(`<div class="trace-line hit">write_group(pos=${pos}, gs=${gs}) → grupo="${grp}" rem=${rem}${scale?' → '+scale:''}</div>`);
-    pos+=gs;
-  }
-  try {
-    const w = numToWords(inp);
-    lines.push(`<div class="trace-line arrow">→ write(1, "${w}\\n", ${w.length+1})</div>`);
-    lines.push(`<div class="trace-line">free(filename) free(dict) free(nbr)</div>`);
-  } catch(e){}
-  el.innerHTML = lines.join('');
-}
-
-// ══════ FILES ═════════════════════════════════════════════════════════════
-
-const FILES_DATA = [
-  { name:'header.h', icon:'📋', type:'Cabeçalho', color:'#1E90FF',
-    desc:'Inclui as 3 bibliotecas do sistema e declara todos os protótipos de função do projeto. Usa include guard para evitar inclusão dupla.',
-    fns:['print_str','str_len','is_valid_arg','get_number','get_dict_path','read_dict_file','parse_line','trim_value','next_line','dict_is_valid','dict_lookup','write_number'] },
-  { name:'main.c', icon:'🚀', type:'Ponto de Entrada', color:'#00C9A7',
-    desc:'Coordena toda a execução: valida argumentos, carrega dicionário, executa conversão e libera memória.',
-    fns:['main','args_valid','run','run_ok'] },
-  { name:'rush_ini.c', icon:'🔍', type:'Validação', color:'#FFD166',
-    desc:'Valida os argumentos da linha de comando e extrai o número a ser convertido para um buffer heap.',
-    fns:['is_valid_arg','get_number'] },
-  { name:'rushfile.c', icon:'📂', type:'I/O de Arquivo', color:'#FF6B6B',
-    desc:'Responsável por localizar o dicionário e carregar seu conteúdo em memória usando syscalls POSIX.',
-    fns:['get_dict_path','read_dict_file','print_str','str_len'] },
-  { name:'parse.c', icon:'📝', type:'Parsing', color:'#82AAFF',
-    desc:'Analisa o conteúdo do dicionário linha por linha, extraindo chaves e valores, validando o formato.',
-    fns:['parse_line','trim_value','next_line','dict_is_valid'] },
-  { name:'lookup.c', icon:'🔎', type:'Busca', color:'#C3E88D',
-    desc:'Busca palavras no dicionário por chave numérica (linear scan). Especializado em busca por escalas.',
-    fns:['dict_lookup','dict_lookup_zeros','write_scale_word','write_digit'] },
-  { name:'group.c', icon:'🔢', type:'Conversão', color:'#F78C6C',
-    desc:'Núcleo do algoritmo: agrupa dígitos em blocos de 3 e compõe a saída textual completa.',
-    fns:['write_two_digits','write_group_of_three','write_group','advance_gs','has_nonzero','write_number'] },
-  { name:'numbers.dict', icon:'📖', type:'Dados', color:'#89DDFF',
-    desc:'Arquivo de texto com 40 entradas mapeando números a palavras em inglês (0 a decillion).',
-    fns:['0:zero','1:one','...','100:hundred','1000:thousand','1000000:million'] },
-];
-
-function buildFilesGrid() {
-  document.getElementById('files-grid').innerHTML = FILES_DATA.map(f=>`
-    <div class="file-card">
-      <div class="file-header">
-        <div class="file-icon" style="background:${f.color}22;border:1px solid ${f.color}44">${f.icon}</div>
-        <div>
-          <div class="file-name" style="color:${f.color}">${f.name}</div>
-          <div class="file-type">${f.type}</div>
-        </div>
-      </div>
-      <div class="file-body">
-        <div class="file-desc">${f.desc}</div>
-        <div class="fn-list">${f.fns.slice(0,4).map(fn=>`<span class="fn-item" style="color:${f.color};background:${f.color}12">${fn}()</span>`).join('')}${f.fns.length>4?`<span class="fn-item" style="color:var(--muted);background:var(--dark3)">+${f.fns.length-4} mais</span>`:''}</div>
-      </div>
-    </div>`).join('');
-}
-
-// ══════ FUNCTIONS ═════════════════════════════════════════════════════════
-
-const FNS = [
-  { name:'open()', cat:'syscall', sig:'int open(path, flags)',
-    desc:'Abre um arquivo e retorna um file descriptor (inteiro). Usado com O_RDONLY para abrir o dicionário em modo somente-leitura. Retorna -1 em erro.',
-    code:`fd = open(filename, O_RDONLY);\nif (fd < 0)\n    return ((char *)0); // arquivo não encontrado`,
-    params:[['filename','Caminho do arquivo a abrir'],['O_RDONLY','Flag: abertura somente leitura']],
-    ret:{ok:'fd >= 0 (file descriptor)', err:'-1 em erro'}, tags:['tag-io']},
-  { name:'read()', cat:'syscall', sig:'ssize_t read(fd, buf, count)',
-    desc:'Lê até count bytes do file descriptor fd e armazena em buf. Retorna o número de bytes lidos. O null-terminator é adicionado manualmente após.',
-    code:`len = read(fd, buf, 4095);\nbuf[len] = '\\0'; // termina a string`,
-    params:[['fd','File descriptor aberto'],['buf','Buffer destino'],['count','Máximo de bytes a ler']],
-    ret:{ok:'Bytes lidos (0 = EOF)', err:'-1 em erro'}, tags:['tag-io']},
-  { name:'write()', cat:'syscall', sig:'ssize_t write(fd, buf, count)',
-    desc:'Escreve count bytes de buf para fd. Usado extensivamente com fd=1 (stdout) para imprimir palavras e separadores. Substitui printf() neste projeto.',
-    code:`write(1, " ", 1);     // espaço separador\nwrite(1, "\\n", 1);   // nova linha final\nwrite(1, word, len);  // imprime palavra`,
-    params:[['fd','1=stdout, 2=stderr'],['buf','Dados a escrever'],['count','Quantidade de bytes']],
-    ret:{ok:'Bytes escritos', err:'-1 em erro'}, tags:['tag-io']},
-  { name:'close()', cat:'syscall', sig:'int close(fd)',
-    desc:'Fecha o file descriptor, liberando-o no kernel. O projeto fecha o fd imediatamente após o read(), antes de processar o conteúdo.',
-    code:`fd = open(filename, O_RDONLY);\nlen = read(fd, buf, 4095);\nclose(fd); // liberado imediatamente`,
-    params:[['fd','File descriptor a fechar']],
-    ret:{ok:'0 em sucesso', err:'-1 em erro'}, tags:['tag-io']},
-  { name:'malloc()', cat:'syscall', sig:'void *malloc(size_t size)',
-    desc:'Aloca size bytes no heap e retorna um ponteiro. Usado 3 vezes: caminho do dicionário (100B), conteúdo do dicionário (len+1B), número (40B).',
-    code:`dict = (char *)malloc((len + 1) * sizeof(char));\n// +1 para o null-terminator`,
-    params:[['size','Bytes a alocar no heap']],
-    ret:{ok:'Ponteiro para área alocada', err:'NULL se sem memória'}, tags:['tag-mem']},
-  { name:'free()', cat:'syscall', sig:'void free(void *ptr)',
-    desc:'Libera memória previamente alocada com malloc. O projeto libera filename, dict e nbr antes de retornar. free(NULL) é seguro.',
-    code:`free(filename);\nfree(dict);\nfree(nbr); // libera todos antes de sair`,
-    params:[['ptr','Ponteiro para memória a liberar']],
-    ret:{ok:'void (sem retorno)', err:'N/A'}, tags:['tag-mem']},
-  { name:'parse_line()', cat:'parse', sig:'int parse_line(line, *key, val, valsz)',
-    desc:'Analisa uma linha do dicionário extraindo a chave numérica (long) e o valor textual. Converte string para long com aritmética: *key = *key*10 + (c-"0").',
-    code:`while (line[i] >= '0' && line[i] <= '9')\n    *key = *key * 10 + (line[i++] - '0');\n// busca ':' depois da chave`,
-    params:[['line','Linha a analisar'],['key','Saída: chave numérica'],['val','Saída: valor textual']],
-    ret:{ok:'1 (sucesso), 0 (vazia)', err:'-1 (formato inválido)'}, tags:['tag-ret']},
-  { name:'trim_value()', cat:'parse', sig:'int trim_value(val, out, outsz)',
-    desc:'Remove espaços/tabs iniciais e finais do valor e colapsa múltiplos espaços internos em um único.',
-    code:`// Avança s até primeiro não-espaço\nwhile (val[s] == ' ' || val[s] == '\\t') s++;\n// Retrocede e até último não-espaço\n// Copia colapsando espaços múltiplos`,
-    params:[['val','Valor bruto do dicionário'],['out','Buffer de saída normalizado']],
-    ret:{ok:'1 (valor não-vazio)', err:'-1 (vazio)'}, tags:['tag-ret']},
-  { name:'next_line()', cat:'parse', sig:'int next_line(dict, i, line)',
-    desc:'Extrai a próxima linha do buffer do dicionário a partir da posição i. Retorna o novo índice (após o \\n).',
-    code:`while (dict[i] != '\\n' && dict[i] != '\\0')\n    line[j++] = dict[i++];\nif (dict[i] == '\\n') i++; // avança`,
-    params:[['dict','Buffer do dicionário'],['i','Posição atual'],['line','Buffer de saída da linha']],
-    ret:{ok:'Novo índice após a linha', err:'N/A'}, tags:['tag-ret']},
-  { name:'dict_lookup()', cat:'lookup', sig:'int dict_lookup(dict, key, out, outsz)',
-    desc:'Busca linear no dicionário pela chave numérica exata. Percorre todas as linhas até encontrar key == k.',
-    code:`while (dict[i] != '\\0') {\n    i = next_line(dict, i, line);\n    if (parse_line(line, &k, val, 256)==1 && k==key)\n        return trim_value(val, out, outsz);\n}`,
-    params:[['dict','Buffer do dicionário'],['key','Chave a buscar (long)'],['out','Saída: palavra encontrada']],
-    ret:{ok:'1 (encontrado)', err:'-1 (não encontrado)'}, tags:['tag-ret']},
-  { name:'dict_lookup_zeros()', cat:'lookup', sig:'int dict_lookup_zeros(dict, nzeros, out, outsz)',
-    desc:'Busca especializada para palavras de escala (hundred, thousand, million...). Conta zeros após o "1" inicial.',
-    code:`if (line[0] != '1') continue;\nint j = 0;\nwhile (line[1+j] == '0') j++; // conta zeros\nif (j == nzeros && line[1+j]==':')  // achou!`,
-    params:[['nzeros','Quantidade de zeros: 2=hundred, 3=thousand, 6=million']],
-    ret:{ok:'1 (encontrado)', err:'-1 (não encontrado)'}, tags:['tag-ret']},
-  { name:'advance_gs()', cat:'group', sig:'int advance_gs(len, pos)',
-    desc:'Calcula o tamanho do próximo grupo de dígitos (1, 2 ou 3). Usa módulo 3: (len-pos)%3, substituindo 0 por 3.',
-    code:`gs = (len - pos) % 3;\nif (gs == 0) gs = 3;\nreturn (gs); // 1, 2 ou 3`,
-    params:[['len','Comprimento total do número'],['pos','Posição atual']],
-    ret:{ok:'1, 2 ou 3 (tamanho do grupo)', err:'N/A'}, tags:['tag-ret']},
-  { name:'write_digit()', cat:'group', sig:'int write_digit(dig, type, dict)',
-    desc:'Converte um caractere dígito para sua chave numérica conforme o tipo: 0=unidade, 1=dezena(x10), 2=teen(+10).',
-    code:`if (type == 1)      key = (dig-'0') * 10; // '4'->40\nelse if (type == 2) key = 10 + (dig-'0'); // '3'->13\nelse                key = (dig-'0');        // '7'->7`,
-    params:[['dig','Caractere dígito ("0"-"9")'],['type','0=unidade, 1=dezena, 2=teen']],
-    ret:{ok:'1', err:'-1'}, tags:['tag-ret']},
-  { name:'write_two_digits()', cat:'group', sig:'int write_two_digits(nbr, start, dict)',
-    desc:'Trata todos os casos de dois dígitos: teens (11-19), dezena simples (20,30...), dezena+unidade (42), só unidade (07).',
-    code:`if (tens == '1')       // teen: 10-19\n    write_digit(units, 2, dict);\nelse if (tens != '0')  // 20-90\n    write_digit(tens, 1, dict);\n// + unidade se != '0'`,
-    params:[['nbr','Buffer do número'],['start','Índice do dígito das dezenas']],
-    ret:{ok:'1', err:'-1'}, tags:['tag-ret']},
-];
-
-let currentFilter = 'all';
-
-function buildFnCards() {
-  document.getElementById('fn-cards').innerHTML = FNS.map((f,i)=>`
-    <div class="fn-card" id="fncard-${i}" data-cat="${f.cat}">
-      <div class="fn-card-header" onclick="toggleFn(${i})">
-        <span class="fn-badge badge-${f.cat}">${f.cat.toUpperCase()}</span>
-        <span class="fn-card-title">${f.name}</span>
-        <span class="fn-card-sig">${f.sig}</span>
-      </div>
-      <div class="fn-card-body">
-        <p class="fn-desc">${f.desc}</p>
-        <div class="code-block"><pre>${f.code}</pre></div>
-        ${f.params.length ? `<table class="params-table">
-          <tr><th>Parâmetro</th><th>Descrição</th></tr>
-          ${f.params.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td></tr>`).join('')}
-        </table>` : ''}
-        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-          <span>Retorno OK: <span class="ret-ok">${f.ret.ok}</span></span>
-          <span>Retorno Erro: <span class="ret-err">${f.ret.err}</span></span>
-        </div>
-      </div>
-    </div>`).join('');
-}
-
-function toggleFn(i) {
-  document.getElementById('fncard-'+i).classList.toggle('open');
-}
-
-function filterFns(cat, btn) {
-  currentFilter = cat;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.fn-card').forEach(c=>{
-    c.style.display = (cat==='all'||c.dataset.cat===cat) ? 'block' : 'none';
-  });
-}
-
-// ══════ DICT EXPLORER ═════════════════════════════════════════════════════
-
-function buildDictEntries() {
-  document.getElementById('dict-entries').innerHTML = DICT_ENTRIES.map(e=>`
-    <div class="dict-entry" id="de-${e.key}" onclick="showDictTrace(${e.key})">
-      <div class="dict-key">${e.key}</div>
-      <div class="dict-sep">:</div>
-      <div class="dict-val">${e.val}</div>
-    </div>`).join('');
-}
-
-function showDictTrace(key) {
-  document.querySelectorAll('.dict-entry').forEach(e=>e.classList.remove('highlight'));
-  const el = document.getElementById('de-'+key);
-  if (el) { el.classList.add('highlight'); el.scrollIntoView({block:'nearest'}); }
-
-  const lines = [];
-  lines.push(`<div class="trace-line">dict_lookup(dict, ${key}, out, 256)</div>`);
-  lines.push(`<div class="trace-line">i = 0</div>`);
-  let i = 0;
-  for (const e of DICT_ENTRIES) {
-    i++;
-    if (e.key === key) {
-      lines.push(`<div class="trace-line hit">  linha ${i}: k=${e.key} == ${key} ✓ ENCONTRADO</div>`);
-      lines.push(`<div class="trace-line arrow">  → trim_value("${e.val}", out, 256)</div>`);
-      lines.push(`<div class="trace-line arrow">  → write(1, "${e.val}", ${e.val.length})</div>`);
-      break;
-    } else {
-      lines.push(`<div class="trace-line">  linha ${i}: k=${e.key} != ${key} → continua</div>`);
-    }
-  }
-  document.getElementById('dict-trace-panel').innerHTML = lines.join('');
-}
-
-function dictSearch() {
-  const v = document.getElementById('dict-search').value.trim();
-  if (!v || !/^\d+$/.test(v)) {
-    document.querySelectorAll('.dict-entry').forEach(e=>e.classList.remove('highlight'));
-    document.getElementById('dict-trace-panel').innerHTML = '<div style="color:var(--muted)">← Clique em uma entrada ou busque um número</div>';
-    return;
-  }
-  const key = +v;
-  if (DICT[key] !== undefined) { showDictTrace(key); }
-  else {
-    document.querySelectorAll('.dict-entry').forEach(e=>e.classList.remove('highlight'));
-    document.getElementById('dict-trace-panel').innerHTML =
-      `<div class="trace-line">dict_lookup(dict, ${key}, out, 256)</div>` +
-      DICT_ENTRIES.map((e,i)=>`<div class="trace-line">  linha ${i+1}: k=${e.key} != ${key}</div>`).join('') +
-      `<div class="trace-line" style="color:var(--red)">→ return (-1) // NÃO ENCONTRADO</div>`;
-  }
-}
-
-// ══════ QUIZ ══════════════════════════════════════════════════════════════
-
-const QUESTIONS = [
-  { q:'O que a função <code>open()</code> retorna em caso de sucesso?',
-    opts:['Um ponteiro para o arquivo','Um file descriptor (inteiro >= 0)','O conteúdo do arquivo','NULL'],
-    ans:1, exp:'open() retorna um file descriptor — um inteiro não-negativo que representa o arquivo aberto na tabela de descritores do processo.' },
-  { q:'Por que <code>buf[len] = \'\\0\'</code> é necessário após o <code>read()</code>?',
-    opts:['Para liberar memória','read() não adiciona null-terminator automaticamente','Para evitar overflow','Para fechar o arquivo'],
-    ans:1, exp:'read() é uma syscall de baixo nível que copia bytes brutos. Ela não sabe que você quer uma string C — você mesmo precisa adicionar o null-terminator.' },
-  { q:'Qual é o valor de <code>fd</code> usado para escrever no stdout?',
-    opts:['0','1','2','-1'],
-    ans:1, exp:'Por convenção POSIX: fd=0 é stdin, fd=1 é stdout, fd=2 é stderr. O projeto usa write(1, ...) para imprimir na saída padrão.' },
-  { q:'O que <code>advance_gs(4, 0)</code> retorna para o número "1042"?',
-    opts:['3','2','1','4'],
-    ans:2, exp:'gs = (len-pos)%3 = (4-0)%3 = 1. O primeiro grupo tem apenas 1 dígito — o "1" de "1.042". Isso garante grupos de no máximo 3 dígitos.' },
-  { q:'Como <code>dict_lookup_zeros(dict, 3, ...)</code> encontra "thousand"?',
-    opts:['Procura a string "thousand" diretamente','Conta 3 zeros após o "1" na linha "1000:"','Busca pela chave numérica 3','Usa índice direto no array'],
-    ans:1, exp:'A função conta zeros: linha "1000:" tem 3 zeros após o "1", então nzeros==3 → match. Isso funciona para qualquer escala: 100 (2 zeros), 1000000 (6 zeros), etc.' },
-  { q:'Qual a diferença entre <code>write_digit(\'5\', 0, dict)</code> e <code>write_digit(\'5\', 1, dict)</code>?',
-    opts:['Nenhuma diferença','type=0 → busca 5 ("five"), type=1 → busca 50 ("fifty")','type=0 → busca 15, type=1 → busca 5','type=0 imprime, type=1 apenas retorna'],
-    ans:1, exp:'type=0: key=(\'5\'-\'0\')=5 → "five". type=1: key=(\'5\'-\'0\')*10=50 → "fifty". type=2 seria key=10+5=15 → "fifteen".' },
-  { q:'O que acontece se <code>malloc()</code> retornar NULL?',
-    opts:['O programa continua normalmente','Comportamento indefinido ao usar o ponteiro','O sistema libera memória automaticamente','O OS fornece memória alternativa'],
-    ans:1, exp:'NULL indica falha de alocação (sem memória disponível). Usar um ponteiro NULL causa segmentation fault. O projeto não verifica explicitamente — uma limitação do código.' },
-  { q:'Por que <code>close(fd)</code> é chamado logo após <code>read()</code>?',
-    opts:['Por requisito da Escola 42','Liberar o file descriptor imediatamente, minimizando o tempo de recurso ocupado','Para poder chamar malloc depois','É obrigatório antes de escrever'],
-    ans:1, exp:'Boa prática: liberar recursos o quanto antes. O conteúdo já está no buffer — o fd não é mais necessário. Sistemas têm limite de fds abertos por processo.' },
-];
-
-let qIndex = 0, score = 0, answered = false;
-
-function buildQuiz() {
-  if (qIndex >= QUESTIONS.length) {
-    showScore(); return;
-  }
-  const q = QUESTIONS[qIndex];
-  answered = false;
-  document.getElementById('quiz-box').innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <div style="font-size:12px;color:var(--muted)">Questão ${qIndex+1} de ${QUESTIONS.length}</div>
-      <div style="font-size:12px;color:var(--green)">Pontos: ${score}</div>
-    </div>
-    <div style="background:var(--dark3);border-radius:8px;height:4px;margin-bottom:24px;">
-      <div style="background:var(--accent);height:100%;border-radius:8px;width:${(qIndex/QUESTIONS.length)*100}%;transition:width .3s"></div>
-    </div>
-    <div class="quiz-question">${q.q}</div>
-    <div class="quiz-options">
-      ${q.opts.map((o,i)=>`
-        <div class="quiz-opt" id="qopt-${i}" onclick="answerQ(${i})">
-          <div class="opt-letter">${String.fromCharCode(65+i)}</div>
-          ${o}
-        </div>`).join('')}
-    </div>
-    <div class="quiz-feedback" id="quiz-feedback"></div>
-    <div class="quiz-nav">
-      <button class="btn-sm" onclick="buildQuiz()" id="btn-next" style="display:none">Próxima →</button>
-      <div class="quiz-progress">${qIndex+1} / ${QUESTIONS.length}</div>
-    </div>`;
-}
-
-function answerQ(i) {
-  if (answered) return;
-  answered = true;
-  const q = QUESTIONS[qIndex];
-  document.querySelectorAll('.quiz-opt').forEach(o=>o.classList.add('disabled'));
-  const fb = document.getElementById('quiz-feedback');
-  if (i === q.ans) {
-    document.getElementById('qopt-'+i).classList.add('correct');
-    fb.className = 'quiz-feedback show ok';
-    fb.innerHTML = '✅ Correto! ' + q.exp;
-    score++;
-  } else {
-    document.getElementById('qopt-'+i).classList.add('wrong');
-    document.getElementById('qopt-'+q.ans).classList.add('correct');
-    fb.className = 'quiz-feedback show no';
-    fb.innerHTML = '❌ Incorreto. ' + q.exp;
-  }
-  document.getElementById('btn-next').style.display = 'block';
-  qIndex++;
-}
-
-function showScore() {
-  const pct = Math.round((score/QUESTIONS.length)*100);
-  const msg = pct===100?'🏆 Perfeito! Você dominou o projeto Rush!':
-              pct>=80?'🎉 Excelente! Você entendeu muito bem!':
-              pct>=60?'👍 Bom trabalho! Revise os pontos perdidos.':
-              '📚 Revise a documentação e tente novamente!';
-  document.getElementById('quiz-box').innerHTML = `
-    <div class="score-display">
-      <div class="score-num">${pct}%</div>
-      <div style="font-size:24px;font-weight:700;margin-top:8px">${score}/${QUESTIONS.length} corretas</div>
-      <div class="score-msg">${msg}</div>
-      <button class="demo-btn" style="margin-top:32px" onclick="qIndex=0;score=0;buildQuiz()">Tentar Novamente</button>
-    </div>`;
-}
-
-// ══════ INIT ══════════════════════════════════════════════════════════════
-
-buildFlowSteps();
-buildFilesGrid();
-buildFnCards();
-buildDictEntries();
-buildQuiz();
-</script>
 </body>
 </html>
