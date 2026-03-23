@@ -16,6 +16,7 @@
   <div class="nav-brand">Rush<em>.c</em></div>
   <div class="nav-tabs">
     <button class="nav-tab active"  onclick="showPage('home',this)">🏠 Início</button>
+    <button class="nav-tab"        onclick="showPage('timeline',this)">⏱️ Timeline</button>
     <button class="nav-tab"        onclick="showPage('flow',this)">⚙️ Fluxo</button>
     <button class="nav-tab"        onclick="showPage('arch',this)">🏛️ Arquitetura</button>
     <button class="nav-tab"        onclick="showPage('files',this)">📁 Arquivos</button>
@@ -119,6 +120,128 @@ one hundred twenty three million four hundred fifty six thousand seven hundred e
 
 $ ./rush-02 pt.dict 42
 quarenta e dois   <span style="color:var(--text3)">← com dicionário personalizado</span></div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PÁGINA: TIMELINE
+  ══════════════════════════════════════════════ -->
+  <section id="pg-timeline" class="page">
+
+    <div class="sec-head">
+      <span class="sec-label">CALL FLOW VISUAL</span>
+      <h2>Timeline de <span>Chamadas</span></h2>
+      <p>
+        Cada linha é um arquivo .c. Cada nó é uma função.
+        As setas mostram a ordem exata de chamada — da esquerda para a direita.
+        Clique em qualquer função para ver sua cadeia interna de chamadas, entradas e saídas.
+      </p>
+    </div>
+
+    <!-- Input demo + resultado -->
+    <div class="tl-input-bar">
+      <label>SIMULAR COM O NÚMERO:</label>
+      <input
+        class="tl-input"
+        id="tl-inp"
+        type="text"
+        placeholder="ex: 1042"
+        maxlength="12"
+        autocomplete="off"
+      />
+      <button class="tl-btn" onclick="runTlDemo()">▶ Converter</button>
+      <div class="tl-result-badge" id="tl-result-badge">
+        <span style="color:var(--text3);font-size:12px">resultado:</span>
+        <span class="tl-result-text"></span>
+      </div>
+    </div>
+
+    <!-- Legenda de arquivos/cores -->
+    <div class="tl-legend">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:1px;margin-right:4px">ARQUIVOS:</span>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#00DDB3"></div>main.c</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#FFB830"></div>rush_ini.c</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#FF5B5B"></div>rushfile.c</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#82AAFF"></div>parse.c</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#C3E88D"></div>lookup.c</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#F78C6C"></div>group.c</div>
+      <span style="margin-left:12px;font-family:var(--mono);font-size:10px;color:var(--text3)">
+        ── setas = ordem de chamada &nbsp;·&nbsp; clique num nó = detalhes
+      </span>
+    </div>
+
+    <!-- Timeline swim lanes (gerado por JS) -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+      <div id="tl-wrap"></div>
+    </div>
+
+    <!-- Painel de detalhes (injetado por JS ao clicar) -->
+    <div class="tl-detail" id="tl-detail"></div>
+
+    <!-- Legenda de badges -->
+    <div class="hr"></div>
+    <span class="sec-label">LEGENDA DOS BADGES</span>
+    <div class="overview-grid" style="margin-top:16px">
+      <div class="ov-card" style="border-color:rgba(59,158,255,.2)">
+        <div class="ico">🔵</div>
+        <h3 style="color:var(--blue)">in</h3>
+        <p>Dado de entrada que a função recebe como parâmetro ou estado.</p>
+      </div>
+      <div class="ov-card" style="border-color:rgba(0,221,179,.2)">
+        <div class="ico">🟢</div>
+        <h3 style="color:var(--cyan)">ok / out</h3>
+        <p>Resultado de sucesso — o que a função produz ou retorna quando tudo corre bem.</p>
+      </div>
+      <div class="ov-card" style="border-color:rgba(255,184,48,.2)">
+        <div class="ico">🟡</div>
+        <h3 style="color:var(--amber)">mem</h3>
+        <p>Operação de memória — malloc() alocar ou free() liberar um bloco no heap.</p>
+      </div>
+      <div class="ov-card" style="border-color:rgba(255,91,91,.2)">
+        <div class="ico">🔴</div>
+        <h3 style="color:var(--red)">err / sys</h3>
+        <p>Falha ou syscall do sistema operacional (open, read, write, close).</p>
+      </div>
+    </div>
+
+    <!-- Mapa de chamadas compacto -->
+    <div class="hr"></div>
+    <span class="sec-label">MAPA COMPACTO DE CHAMADAS</span>
+    <div class="code-art mt16">
+      <div class="code-art-bar">
+        <div class="code-art-dots"><span></span><span></span><span></span></div>
+        <div class="code-art-title">call graph — quem chama quem (simplificado)</div>
+      </div>
+      <div class="code-art-body">main()
+├── args_valid()
+│   └── is_valid_arg()          [rush_ini.c]
+└── run()
+    ├── get_dict_path()          [rushfile.c] → malloc(100)
+    ├── read_dict_file()         [rushfile.c] → open() read() close() malloc(len+1)
+    ├── dict_is_valid()          [parse.c]
+    │   ├── next_line()
+    │   ├── parse_line()
+    │   └── trim_value()
+    ├── get_number()             [rush_ini.c] → malloc(40)
+    ├── run_ok()
+    │   └── write_number()       [group.c]
+    │       └── write_group()
+    │           ├── advance_gs()
+    │           ├── write_group_of_three()
+    │           │   ├── write_digit()
+    │           │   │   └── write_scale_word()
+    │           │   │       └── dict_lookup()    [lookup.c]
+    │           │   │           ├── next_line()  [parse.c]
+    │           │   │           ├── parse_line() [parse.c]
+    │           │   │           └── trim_value() [parse.c]
+    │           │   └── write_two_digits()
+    │           │       └── write_digit() ...
+    │           └── dict_lookup_zeros()          [lookup.c]
+    │               ├── next_line()              [parse.c]
+    │               ├── parse_line()             [parse.c]
+    │               └── trim_value()             [parse.c]
+    └── free() × 3              [main.c] → filename dict nbr</div>
     </div>
 
   </section>

@@ -1387,6 +1387,506 @@ function showScore() {
 
 
 /* ════════════════════════════════════════════════════════════
+   TIMELINE — dados e lógica
+   ════════════════════════════════════════════════════════════
+
+   Cada STEP tem:
+     id        — identificador único
+     col       — coluna na timeline (0-based, espaçamento de 80px)
+     lane      — linha (índice do arquivo)
+     color     — cor do nó
+     fn        — nome da função
+     file      — arquivo fonte
+     calls     — cadeia de chamadas internas [{fn, ret, depth}]
+     inputs    — o que entra  [{badge, text}]
+     outputs   — o que sai   [{badge, text}]
+     desc      — descrição curta
+*/
+
+var TL_LANES = [
+  { label: 'main.c',      color: '#00DDB3' },
+  { label: 'rush_ini.c',  color: '#FFB830' },
+  { label: 'rushfile.c',  color: '#FF5B5B' },
+  { label: 'parse.c',     color: '#82AAFF' },
+  { label: 'lookup.c',    color: '#C3E88D' },
+  { label: 'group.c',     color: '#F78C6C' }
+];
+
+var TL_STEPS = [
+  {
+    id: 0, col: 0, lane: 0, color: '#00DDB3',
+    fn: 'main()',
+    file: 'main.c',
+    desc: 'Ponto de entrada. Valida os argumentos e decide se chama run() ou imprime "Error".',
+    calls: [
+      { fn: 'args_valid(argc, argv)', ret: '1 ou 2', depth: 0 },
+      { fn: 'run(argc, argv)',        ret: '0 ou -1', depth: 0 }
+    ],
+    inputs:  [ { badge:'sys', text:'argc, argv[] do sistema operacional' } ],
+    outputs: [ { badge:'ok', text:'exit(0) — sucesso' }, { badge:'err', text:'exit(1) — "Error\\n"' } ]
+  },
+  {
+    id: 1, col: 1, lane: 0, color: '#00DDB3',
+    fn: 'args_valid()',
+    file: 'main.c',
+    desc: 'Valida se o número de argumentos e seus formatos estão corretos (modo 0 = dígitos, modo 1 = caminho).',
+    calls: [
+      { fn: 'is_valid_arg(argv[1], 0)', ret: '0 ou 1', depth: 1 },
+      { fn: 'is_valid_arg(argv[1], 1)', ret: '0 ou 1', depth: 1 },
+      { fn: 'is_valid_arg(argv[2], 0)', ret: '0 ou 1', depth: 1 }
+    ],
+    inputs:  [ { badge:'in', text:'argc (2 ou 3), argv[]' } ],
+    outputs: [ { badge:'ok', text:'1 = um arg | 2 = dict+num' }, { badge:'err', text:'0 = inválido' } ]
+  },
+  {
+    id: 2, col: 2, lane: 1, color: '#FFB830',
+    fn: 'is_valid_arg()',
+    file: 'rush_ini.c',
+    desc: 'Verifica caractere por caractere. Modo 0: só dígitos. Modo 1: letras, pontos, barras, hífens.',
+    calls: [
+      { fn: 'while (argv[c] != \'\\0\')', ret: 'loop', depth: 0 },
+      { fn: 'verifica argv[c] >= \'0\'',  ret: 'bool', depth: 1 }
+    ],
+    inputs:  [ { badge:'in', text:'argv: string do argumento' }, { badge:'in', text:'mode: 0=dígitos, 1=caminho' } ],
+    outputs: [ { badge:'ok', text:'1 = argumento válido' }, { badge:'err', text:'0 = caractere inválido encontrado' } ]
+  },
+  {
+    id: 3, col: 3, lane: 0, color: '#00DDB3',
+    fn: 'run()',
+    file: 'main.c',
+    desc: 'Orquestra o fluxo principal: carrega dicionário, valida, extrai número, converte, libera memória.',
+    calls: [
+      { fn: 'get_dict_path(argc, argv)', ret: 'char*', depth: 0 },
+      { fn: 'read_dict_file(filename)',  ret: 'char*', depth: 0 },
+      { fn: 'dict_is_valid(dict)',       ret: '0|1',   depth: 0 },
+      { fn: 'get_number(argc, argv, &nbr)', ret: 'void', depth: 0 },
+      { fn: 'run_ok(nbr, dict, &ret)',   ret: 'void', depth: 0 },
+      { fn: 'free(filename|dict|nbr)',   ret: 'void', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'argc, argv[]' } ],
+    outputs: [ { badge:'ok', text:'0 = conversão OK' }, { badge:'err', text:'-1 = "Dict Error"' } ]
+  },
+  {
+    id: 4, col: 4, lane: 2, color: '#FF5B5B',
+    fn: 'get_dict_path()',
+    file: 'rushfile.c',
+    desc: 'Decide qual arquivo usar: "numbers.dict" (padrão) ou argv[1] (custom). Copia para heap com malloc(100).',
+    calls: [
+      { fn: 'malloc(100 * sizeof(char))', ret: 'char*', depth: 0 },
+      { fn: 'while (src[c] != \'\\0\')',    ret: 'loop',  depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'argc: decide padrão ou custom' }, { badge:'in', text:'argv[1]: caminho custom (se argc==3)' } ],
+    outputs: [ { badge:'mem', text:'malloc(100) — caminho no heap' }, { badge:'ok', text:'char* filename' } ]
+  },
+  {
+    id: 5, col: 5, lane: 2, color: '#FF5B5B',
+    fn: 'read_dict_file()',
+    file: 'rushfile.c',
+    desc: 'Abre o arquivo, lê até 4095 bytes, fecha imediatamente, adiciona \\0 e copia para o heap.',
+    calls: [
+      { fn: 'open(filename, O_RDONLY)',    ret: 'fd>=0', depth: 0 },
+      { fn: 'read(fd, buf, 4095)',         ret: 'len',   depth: 0 },
+      { fn: 'close(fd)',                   ret: '0',     depth: 0 },
+      { fn: 'malloc((len+1)*sizeof(char))','ret':'char*', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'filename: caminho do dicionário' } ],
+    outputs: [ { badge:'mem', text:'malloc(len+1) — conteúdo no heap' }, { badge:'ok', text:'char* dict' }, { badge:'err', text:'NULL se falhar' } ]
+  },
+  {
+    id: 6, col: 6, lane: 3, color: '#82AAFF',
+    fn: 'dict_is_valid()',
+    file: 'parse.c',
+    desc: 'Percorre todas as linhas do dicionário verificando o formato "número: palavra". Uma linha ruim invalida tudo.',
+    calls: [
+      { fn: 'next_line(dict, i, line)',    ret: 'int i', depth: 0 },
+      { fn: 'parse_line(line, &k, v, 256)','ret':'0|1|-1',depth: 1 },
+      { fn: 'trim_value(val, line, 512)',  ret: '0|1',   depth: 1 }
+    ],
+    inputs:  [ { badge:'in', text:'dict: buffer completo do dicionário' } ],
+    outputs: [ { badge:'ok', text:'1 = todas as linhas válidas' }, { badge:'err', text:'0 = linha malformada encontrada' } ]
+  },
+  {
+    id: 7, col: 7, lane: 3, color: '#82AAFF',
+    fn: 'next_line()',
+    file: 'parse.c',
+    desc: 'Iterador de linhas: a partir do índice i, copia a próxima linha para o buffer e retorna o novo índice.',
+    calls: [
+      { fn: 'while (dict[i] != \'\\n\')',    ret: 'loop', depth: 0 },
+      { fn: 'line[j++] = dict[i++]',       ret: 'copy', depth: 1 }
+    ],
+    inputs:  [ { badge:'in', text:'dict: buffer do dicionário' }, { badge:'in', text:'i: posição atual (ex: 0)' } ],
+    outputs: [ { badge:'ok', text:'novo i: posição após o \\n' }, { badge:'ok', text:'line: a linha extraída como string' } ]
+  },
+  {
+    id: 8, col: 8, lane: 3, color: '#82AAFF',
+    fn: 'parse_line()',
+    file: 'parse.c',
+    desc: 'Extrai chave numérica e valor textual de uma linha. Converte string→long sem atoi(). Exige ":" obrigatório.',
+    calls: [
+      { fn: 'key = key*10 + (line[i]-\'0\')', ret: 'long', depth: 0 },
+      { fn: 'pula espaços até \':\'',          ret: 'skip',  depth: 0 },
+      { fn: 'copia val após \':\'',            ret: 'copy',  depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'line: ex. "1000: thousand"' } ],
+    outputs: [ { badge:'ok', text:'*key = 1000 (long)' }, { badge:'ok', text:'val = " thousand"' }, { badge:'err', text:'-1 se sem ":" ou sem dígito inicial' } ]
+  },
+  {
+    id: 9, col: 9, lane: 3, color: '#82AAFF',
+    fn: 'trim_value()',
+    file: 'parse.c',
+    desc: 'Remove espaços das bordas e colapsa espaços internos duplos. "  forty   two  " → "forty two".',
+    calls: [
+      { fn: 'avança s até não-espaço',     ret: 'int s', depth: 0 },
+      { fn: 'recua e até não-espaço',      ret: 'int e', depth: 0 },
+      { fn: 'copia [s..e] colapsando',     ret: 'copy',  depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'val: " forty   two  " (bruto)' } ],
+    outputs: [ { badge:'ok', text:'out = "forty two" (normalizado)' }, { badge:'err', text:'-1 se val era só espaços' } ]
+  },
+  {
+    id: 10, col: 10, lane: 1, color: '#FFB830',
+    fn: 'get_number()',
+    file: 'rush_ini.c',
+    desc: 'Aloca 40 bytes no heap e copia o argumento número de argv. O índice i varia conforme argc.',
+    calls: [
+      { fn: 'malloc(40 * sizeof(char))',   ret: 'char*', depth: 0 },
+      { fn: 'while (argv[i][j] != \'\\0\')', ret: 'loop', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'argc: decide índice (1 ou 2)' }, { badge:'in', text:'argv[i]: string do número' } ],
+    outputs: [ { badge:'mem', text:'malloc(40) — número no heap' }, { badge:'ok', text:'*nbr = "1042"' } ]
+  },
+  {
+    id: 11, col: 11, lane: 5, color: '#F78C6C',
+    fn: 'write_number()',
+    file: 'group.c',
+    desc: 'Loop principal da conversão. Para cada grupo de dígitos, chama write_group() se houver dígito não-zero.',
+    calls: [
+      { fn: 'advance_gs(len, pos)',        ret: 'int gs', depth: 0 },
+      { fn: 'has_nonzero(nbr, pos, gs)',   ret: '0|1',    depth: 0 },
+      { fn: 'write_group(nbr, pos, len, dict)', ret: '1|-1', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'nbr: "1042"' }, { badge:'in', text:'dict: buffer do dicionário' } ],
+    outputs: [ { badge:'ok', text:'1 = número impresso no stdout' }, { badge:'err', text:'-1 = chave não encontrada' } ]
+  },
+  {
+    id: 12, col: 12, lane: 5, color: '#F78C6C',
+    fn: 'advance_gs()',
+    file: 'group.c',
+    desc: 'Calcula o tamanho do próximo grupo (1, 2 ou 3) usando módulo: gs = (len-pos)%3. Se 0, retorna 3.',
+    calls: [
+      { fn: 'gs = (len - pos) % 3',       ret: 'int', depth: 0 },
+      { fn: 'if (gs == 0) gs = 3',        ret: 'fix', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'len: comprimento total do número' }, { badge:'in', text:'pos: posição atual' } ],
+    outputs: [ { badge:'ok', text:'1, 2 ou 3 — tamanho do grupo' } ]
+  },
+  {
+    id: 13, col: 13, lane: 5, color: '#F78C6C',
+    fn: 'write_group()',
+    file: 'group.c',
+    desc: 'Combina dígitos com escala: write_group_of_three() imprime os dígitos, dict_lookup_zeros() adiciona "thousand" etc.',
+    calls: [
+      { fn: 'write_group_of_three(nbr,pos,gs,dict)', ret:'1|-1', depth: 0 },
+      { fn: 'rem = len - pos - gs',                  ret:'int',  depth: 0 },
+      { fn: 'dict_lookup_zeros(dict, rem, word, 256)', ret:'1|-1', depth: 0 },
+      { fn: 'print_str(word)',                        ret:'void', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'nbr, pos, len: posição no número' }, { badge:'in', text:'dict: dicionário' } ],
+    outputs: [ { badge:'ok', text:'write(): "one thousand" no stdout' }, { badge:'err', text:'-1 se chave ausente' } ]
+  },
+  {
+    id: 14, col: 14, lane: 5, color: '#F78C6C',
+    fn: 'write_group_of_three()',
+    file: 'group.c',
+    desc: 'Processa grupo de 1, 2 ou 3 dígitos. Para size=3: imprime centena+"hundred", depois delega 2 restantes.',
+    calls: [
+      { fn: 'write_digit(nbr[start], 0, dict)',  ret:'1|-1', depth: 0 },
+      { fn: 'write_scale_word(100, dict)',         ret:'1|-1', depth: 0 },
+      { fn: 'write_two_digits(nbr, start+1, dict)', ret:'1|-1', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'nbr, start: início do grupo' }, { badge:'in', text:'size: 1, 2 ou 3' } ],
+    outputs: [ { badge:'ok', text:'write(): dígitos em palavras' } ]
+  },
+  {
+    id: 15, col: 15, lane: 5, color: '#F78C6C',
+    fn: 'write_two_digits()',
+    file: 'group.c',
+    desc: 'Trata todos os 100 casos de 00-99: teens (10-19), dezenas (20-90), dezena+unidade, só unidade, zero.',
+    calls: [
+      { fn: 'if (tens==\'1\') write_digit(units,2)', ret:'teen', depth: 0 },
+      { fn: 'write_digit(tens, 1, dict)',           ret:'dezena', depth: 0 },
+      { fn: 'write_digit(units, 0, dict)',          ret:'unidade', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'nbr[start]: tens char' }, { badge:'in', text:'nbr[start+1]: units char' } ],
+    outputs: [ { badge:'ok', text:'write(): "forty two", "fifteen"...' } ]
+  },
+  {
+    id: 16, col: 16, lane: 4, color: '#C3E88D',
+    fn: 'write_digit()',
+    file: 'lookup.c',
+    desc: 'Converte char dígito → chave long conforme type (0=unidade, 1=dezena×10, 2=teen+10). Delega para write_scale_word().',
+    calls: [
+      { fn: 'key = (dig-\'0\')*10   [type=1]', ret:'long', depth: 0 },
+      { fn: 'key = 10+(dig-\'0\')   [type=2]', ret:'long', depth: 0 },
+      { fn: 'key = (dig-\'0\')      [type=0]', ret:'long', depth: 0 },
+      { fn: 'write_scale_word(key, dict)',      ret:'1|-1', depth: 1 }
+    ],
+    inputs:  [ { badge:'in', text:'dig: char \'0\'–\'9\'' }, { badge:'in', text:'type: 0=unidade, 1=dezena, 2=teen' } ],
+    outputs: [ { badge:'ok', text:'write(): palavra no stdout' } ]
+  },
+  {
+    id: 17, col: 17, lane: 4, color: '#C3E88D',
+    fn: 'write_scale_word()',
+    file: 'lookup.c',
+    desc: 'Busca a palavra no dicionário pela chave numérica e a imprime com print_str() → write().',
+    calls: [
+      { fn: 'dict_lookup(dict, key, word, 256)', ret:'1|-1', depth: 0 },
+      { fn: 'print_str(word)',                   ret:'void', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'key: ex. 40 (forty), 15 (fifteen)' } ],
+    outputs: [ { badge:'ok', text:'write(1, "forty", 5) no stdout' } ]
+  },
+  {
+    id: 18, col: 18, lane: 4, color: '#C3E88D',
+    fn: 'dict_lookup()',
+    file: 'lookup.c',
+    desc: 'Busca sequencial O(n): percorre todas as linhas do dicionário até encontrar k == key.',
+    calls: [
+      { fn: 'next_line(dict, i, line)',         ret:'int i', depth: 0 },
+      { fn: 'parse_line(line, &k, val, 256)',   ret:'0|1|-1', depth: 1 },
+      { fn: 'if (k==key) trim_value(val,...)',  ret:'1|-1',  depth: 1 }
+    ],
+    inputs:  [ { badge:'in', text:'key: 40' } ],
+    outputs: [ { badge:'ok', text:'out = "forty"  return 1' }, { badge:'err', text:'-1 se chave não existe' } ]
+  },
+  {
+    id: 19, col: 19, lane: 4, color: '#C3E88D',
+    fn: 'dict_lookup_zeros()',
+    file: 'lookup.c',
+    desc: 'Busca escala contando zeros: "1000:" tem 3 zeros → nzeros=3 → "thousand". Evita comparar números gigantes.',
+    calls: [
+      { fn: 'if (line[0]!=\'1\') continue',      ret:'skip', depth: 0 },
+      { fn: 'conta zeros após \'1\'',             ret:'int j', depth: 0 },
+      { fn: 'if (j==nzeros) parse_line()',       ret:'match',depth: 0 },
+      { fn: 'trim_value(val, out, outsz)',        ret:'1|-1', depth: 1 }
+    ],
+    inputs:  [ { badge:'in', text:'nzeros: ex. 3 (thousand), 6 (million)' } ],
+    outputs: [ { badge:'ok', text:'out = "thousand"  return 1' }, { badge:'err', text:'-1 se não encontrado' } ]
+  },
+  {
+    id: 20, col: 20, lane: 0, color: '#00DDB3',
+    fn: 'run_ok()',
+    file: 'main.c',
+    desc: 'Chama write_number() e escreve a nova linha. Se houver erro de dicionário, imprime "Dict Error".',
+    calls: [
+      { fn: 'write_number(nbr, dict)',   ret:'1|-1', depth: 0 },
+      { fn: 'write(1, "\\n", 1)',        ret:'void', depth: 0 },
+      { fn: 'print_str("Dict Error\\n")', ret:'void', depth: 0 }
+    ],
+    inputs:  [ { badge:'in', text:'nbr: número a converter' }, { badge:'in', text:'dict: dicionário carregado' } ],
+    outputs: [ { badge:'ok', text:'stdout: "forty two\\n"' }, { badge:'err', text:'stdout: "Dict Error\\n"' } ]
+  },
+  {
+    id: 21, col: 21, lane: 0, color: '#00DDB3',
+    fn: 'free() × 3',
+    file: 'main.c',
+    desc: 'Libera os 3 buffers alocados com malloc(): filename (100B), dict (len+1B), nbr (40B). Sem leaks.',
+    calls: [
+      { fn: 'free(filename)',  ret:'void', depth: 0 },
+      { fn: 'free(dict)',      ret:'void', depth: 0 },
+      { fn: 'free(nbr)',       ret:'void', depth: 0 }
+    ],
+    inputs:  [ { badge:'mem', text:'filename: malloc(100)' }, { badge:'mem', text:'dict: malloc(len+1)' }, { badge:'mem', text:'nbr: malloc(40)' } ],
+    outputs: [ { badge:'ok', text:'memória devolvida ao OS' } ]
+  }
+];
+
+/* ── LANE HEIGHT ── */
+var TL_LANE_H = 72;
+var TL_COL_W  = 80;
+
+/* ── activeTlStep ── */
+var activeTlStep = -1;
+
+function buildTimeline() {
+  var wrap = document.getElementById('tl-wrap');
+  if (!wrap) return;
+
+  var totalCols = 22;
+  var totalW    = 120 + totalCols * TL_COL_W;
+
+  /* ── column headers ── */
+  var headHtml = '<div class="tl-col-headers" style="width:' + totalW + 'px">' +
+    '<div class="tl-lane-label"></div>' +
+    '<div class="tl-col-nums">';
+  for (var c = 0; c < totalCols; c++) {
+    headHtml += '<div class="tl-col-num">' + (c + 1) + '</div>';
+  }
+  headHtml += '</div></div>';
+
+  /* ── lanes ── */
+  var bodyHtml = '<div class="tl-outer"><div class="tl-lanes" style="width:' + totalW + 'px;position:relative">';
+
+  /* SVG overlay for arrows */
+  var svgH = TL_LANES.length * TL_LANE_H;
+  var svgW = totalW - 120;
+  var svgArrows = '';
+
+  TL_LANES.forEach(function(lane, li) {
+    /* gather nodes in this lane */
+    var nodes = TL_STEPS.filter(function(s) { return s.lane === li; });
+    var nodesHtml = nodes.map(function(step) {
+      var x = step.col * TL_COL_W + TL_COL_W / 2 - 36;
+      return '<div class="tl-node" id="tln' + step.id + '" ' +
+        'style="left:' + x + 'px;color:' + step.color + ';animation-delay:' + (step.id * 0.04) + 's"' +
+        ' onclick="tlClickStep(' + step.id + ')">' +
+        '<div class="tl-node-inner" data-step="' + (step.id + 1) + '" style="color:' + step.color + '">' +
+          step.fn +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    bodyHtml += '<div class="tl-lane">' +
+      '<div class="tl-lane-label" style="color:' + lane.color + '">' + lane.label + '</div>' +
+      '<div class="tl-lane-body">' + nodesHtml + '</div>' +
+    '</div>';
+  });
+
+  /* draw arrows between consecutive steps */
+  /* arrows go: step i → step i+1 */
+  for (var i = 0; i < TL_STEPS.length - 1; i++) {
+    var s  = TL_STEPS[i];
+    var s2 = TL_STEPS[i + 1];
+    var x1 = s.col  * TL_COL_W + TL_COL_W / 2 + 36 - 4; /* right edge of node */
+    var y1 = s.lane  * TL_LANE_H + TL_LANE_H / 2;
+    var x2 = s2.col * TL_COL_W + TL_COL_W / 2 - 36 + 4; /* left edge of next */
+    var y2 = s2.lane * TL_LANE_H + TL_LANE_H / 2;
+
+    var isSameLane = s.lane === s2.lane;
+    var col = (i === 0) ? '#00DDB3' : TL_STEPS[i].color;
+
+    if (isSameLane) {
+      /* straight horizontal */
+      svgArrows += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+        '" stroke="' + col + '" stroke-width="1.5" opacity=".5" stroke-dasharray="4,3" marker-end="url(#tl-arr)"/>';
+    } else {
+      /* curved bezier crossing lanes */
+      var mx = (x1 + x2) / 2;
+      svgArrows += '<path d="M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2 + '"' +
+        ' fill="none" stroke="' + col + '" stroke-width="1.5" opacity=".45" stroke-dasharray="4,3" marker-end="url(#tl-arr)"/>';
+    }
+  }
+
+  /* sequence numbers along top */
+  var svgNums = '';
+  TL_STEPS.forEach(function(step) {
+    var cx = step.col * TL_COL_W + TL_COL_W / 2;
+    var cy = step.lane * TL_LANE_H + TL_LANE_H / 2;
+    svgNums += '<circle cx="' + cx + '" cy="' + cy + '" r="14" fill="' + step.color + '" opacity=".08"/>';
+  });
+
+  bodyHtml += '<svg class="tl-svg-overlay" style="width:' + svgW + 'px;height:' + svgH + 'px">' +
+    '<defs>' +
+      '<marker id="tl-arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">' +
+        '<polygon points="0 0, 7 2.5, 0 5" fill="#8AADCC" opacity=".7"/>' +
+      '</marker>' +
+    '</defs>' +
+    svgNums + svgArrows +
+  '</svg>';
+
+  bodyHtml += '</div></div>'; /* tl-lanes + tl-outer */
+
+  wrap.innerHTML = headHtml + bodyHtml;
+}
+
+function tlClickStep(id) {
+  var step = TL_STEPS[id];
+  if (!step) return;
+
+  /* toggle */
+  if (activeTlStep === id) {
+    activeTlStep = -1;
+    document.querySelectorAll('.tl-node').forEach(function(n) { n.classList.remove('active'); });
+    var det = document.getElementById('tl-detail');
+    if (det) det.classList.remove('show');
+    return;
+  }
+
+  activeTlStep = id;
+  document.querySelectorAll('.tl-node').forEach(function(n) { n.classList.remove('active'); });
+  var nd = document.getElementById('tln' + id);
+  if (nd) nd.classList.add('active');
+
+  /* build detail */
+  var calls = step.calls.map(function(c, i) {
+    var indent = c.depth > 0 ? 'margin-left:' + (c.depth * 16) + 'px;' : '';
+    var retCls = (c.ret === '1|-1' || c.ret === '-1' || c.ret === 'NULL') ? 'tl-ret-err' : 'tl-ret-ok';
+    return '<div class="tl-call-item" style="' + indent + 'animation-delay:' + (i * 0.06) + 's">' +
+      (c.depth > 0 ? '<span class="tl-ci-arrow">↳</span>' : '<span style="color:var(--text3);font-size:11px">' + (i+1) + '.</span>') +
+      '<span class="tl-ci-fn">' + c.fn + '</span>' +
+      '<span class="tl-ci-ret ' + retCls + '">' + c.ret + '</span>' +
+    '</div>';
+  }).join('');
+
+  var badgeMap = { 'in':'tl-io-in', 'ok':'tl-io-out', 'err':'tl-io-out', 'mem':'tl-io-mem', 'sys':'tl-io-sys' };
+  var ioHtml = function(items) {
+    return items.map(function(item) {
+      return '<div class="tl-io-row">' +
+        '<span class="tl-io-badge ' + (badgeMap[item.badge] || 'tl-io-in') + '">' + item.badge + '</span>' +
+        '<span>' + item.text + '</span>' +
+      '</div>';
+    }).join('');
+  };
+
+  var det = document.getElementById('tl-detail');
+  if (!det) return;
+  det.innerHTML =
+    '<div class="tl-detail-header">' +
+      '<div class="tl-detail-step" style="background:' + step.color + '20;color:' + step.color + ';border:2px solid ' + step.color + '">' + (id+1) + '</div>' +
+      '<div>' +
+        '<div class="tl-detail-title">' + step.fn + '</div>' +
+        '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + step.desc + '</div>' +
+      '</div>' +
+      '<span class="tl-detail-file">' + step.file + '</span>' +
+      '<button class="tl-detail-close" onclick="tlClickStep(' + id + ')">✕ fechar</button>' +
+    '</div>' +
+    '<div class="tl-detail-body">' +
+      '<div class="tl-detail-left">' +
+        '<div class="tl-detail-label">CADEIA DE CHAMADAS</div>' +
+        '<div class="tl-call-chain">' + calls + '</div>' +
+      '</div>' +
+      '<div class="tl-detail-right">' +
+        '<div class="tl-detail-label">ENTRADAS</div>' +
+        ioHtml(step.inputs) +
+        '<div class="tl-detail-label" style="margin-top:16px">SAÍDAS</div>' +
+        ioHtml(step.outputs) +
+      '</div>' +
+    '</div>';
+  det.classList.add('show');
+
+  /* scroll into view */
+  setTimeout(function() {
+    det.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function runTlDemo() {
+  var v = document.getElementById('tl-inp').value.trim();
+  var badge = document.getElementById('tl-result-badge');
+  if (!v || !/^\d+$/.test(v)) {
+    badge.classList.remove('show');
+    return;
+  }
+  try {
+    var w = numToWords(v);
+    if (w) {
+      badge.querySelector('.tl-result-text').textContent = v + '  →  ' + w;
+      badge.classList.add('show');
+    }
+  } catch(e) { badge.classList.remove('show'); }
+}
+
+/* ════════════════════════════════════════════════════════════
    5. INIT
    ════════════════════════════════════════════════════════════ */
 
@@ -1399,6 +1899,7 @@ document.addEventListener('DOMContentLoaded', function() {
   buildQuiz();
   buildArchDiagram();
   buildMemDiagram();
+  buildTimeline();
 
   /* input listeners */
   var demoInp = document.getElementById('demo-inp');
@@ -1407,20 +1908,26 @@ document.addEventListener('DOMContentLoaded', function() {
   var traceInp = document.getElementById('trace-inp');
   if (traceInp) traceInp.addEventListener('input', updateTrace);
 
+  var tlInp = document.getElementById('tl-inp');
+  if (tlInp) tlInp.addEventListener('input', runTlDemo);
+
   var dictSearch = document.getElementById('dict-search');
-  if (dictSearch) dictSearch.addEventListener('input', function() { dictSearch.value && window.dictSearch && window.dictSearch(); });
+  if (dictSearch) dictSearch.addEventListener('input', function() { window.dictSearchFn && window.dictSearchFn(); });
 
   /* expose globally */
-  window.showPage = showPage;
-  window.runDemo = runDemo;
-  window.updateTrace = updateTrace;
-  window.dictSearch = dictSearch;
-  window.toggleFn = toggleFn;
-  window.filterFns = filterFns;
-  window.copyCode = copyCode;
+  window.showPage      = showPage;
+  window.runDemo       = runDemo;
+  window.updateTrace   = updateTrace;
+  window.dictSearchFn  = dictSearch;
+  window.dictSearch    = dictSearch;
+  window.toggleFn      = toggleFn;
+  window.filterFns     = filterFns;
+  window.copyCode      = copyCode;
   window.showDictTrace = showDictTrace;
-  window.toggleFlow = toggleFlow;
-  window.toggleMake = toggleMake;
-  window.answerQ = answerQ;
-  window.nextQ = nextQ;
+  window.toggleFlow    = toggleFlow;
+  window.toggleMake    = toggleMake;
+  window.answerQ       = answerQ;
+  window.nextQ         = nextQ;
+  window.tlClickStep   = tlClickStep;
+  window.runTlDemo     = runTlDemo;
 });
